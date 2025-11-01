@@ -17,40 +17,6 @@ PaxD is a package manager and command-line tool designed to simplify the install
 - Updating installed packages
 - Running installed applications
 
-## 📚 Repository Contents
-
-This repository contains the following official packages:
-
-### Core Packages
-
-- **[com.mralfiem591.paxd](packages/com.mralfiem591.paxd)** (v1.6.2)
-  - The main command line tool for using PaxD
-  - CLI-based package manager and installer
-  - Gateway to the PaxD ecosystem
-
-- **[com.mralfiem591.paxd-sdk](packages/com.mralfiem591.paxd-sdk)** (v1.2.0)
-  - The Software Development Kit for PaxD
-  - Tools for package development
-
-- **[com.mralfiem591.paxd-compiler](packages/com.mralfiem591.paxd-compiler)**
-  - YAML to PaxD package file compiler
-  - Enables modern YAML-based package definitions
-
-### Utility Packages
-
-- **[com.mralfiem591.paxd-imageview](packages/com.mralfiem591.paxd-imageview)**
-  - Image viewing utility
-  - Integrated with the PaxD ecosystem
-
-- **[com.mralfiem591.vulnerability](packages/com.mralfiem591.vulnerability)**
-  - Vulnerability scanner for PaxD packages
-  - Security analysis tools
-
-### Testing
-
-- **[com.mralfiem591.test](packages/com.mralfiem591.test)**
-  - Test package for development and validation
-
 ## 🚀 Getting Started
 
 ### Installing PaxD
@@ -62,7 +28,6 @@ The main PaxD package requires the following dependencies:
 - requests
 - colorama
 - argparse
-- sentry-sdk
 - pyyaml
 
 ### Using This Repository
@@ -127,6 +92,7 @@ Please ensure your contributions follow the existing patterns and maintain compa
 ## 🔗 Links
 
 - Repository: [github.com/mralfiem591/paxd-default-repository](https://github.com/mralfiem591/paxd-default-repository)
+- Repository (ready for use in repository file): `optimised::https://raw.githubusercontent.com/mralfiem591/paxd-default-repository/refs/heads/main`
 - Author: [@mralfiem591](https://github.com/mralfiem591)
 
 ## 📊 Repository Structure
