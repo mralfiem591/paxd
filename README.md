@@ -108,7 +108,7 @@ paxd-default-repository/
 ├── official              # List of official packages
 ├── resolution            # Package name resolution mappings
 ├── vulnerabilities       # Known vulnerability database
-└── LICENSE              # MIT License
+└── LICENSE               # MIT License
 ```
 
 ---
