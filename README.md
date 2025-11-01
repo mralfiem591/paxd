@@ -91,8 +91,8 @@ Please ensure your contributions follow the existing patterns and maintain compa
 ## 👨‍💻 Credits
 
 - **Maintainer**: mralfiem591
-- **Backend**: Apache, mralfiem591
-- **Frontend**: HTML/CSS, POST, mralfiem591
+- **Backend**: Git, GitHub API
+- **Frontend**: GitHub
 
 ## 🔗 Links
 
