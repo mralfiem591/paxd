@@ -4,6 +4,8 @@
 
 The official default repository for PaxD packages, and home to the official PaxD package.
 
+[Install PaxD!](https://github.com/mralfiem591/paxd-installer/releases/download/main/paxd-installer.py)
+
 ## 📦 About
 
 This repository serves as the default package repository for [PaxD](https://github.com/mralfiem591/paxd), a command-line package manager. It hosts official packages and provides a centralized location for package distribution and management.
