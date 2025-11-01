@@ -1,7 +1,7 @@
 # PaxD Default Repository
 
 ![PaxD Logo](repoasset/logo.png)
-![PaxD Ready Badge](repoasset/paxdreadu.png)
+![PaxD Ready Badge](repoasset/paxdready.png)
 
 The official default repository for PaxD packages, and home to the official PaxD package.
 
