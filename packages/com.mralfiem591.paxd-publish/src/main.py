@@ -243,6 +243,11 @@ class PaxDPackagePublisher:
                 repo_path
             )
             
+            # Configure git user for this repository
+            with repo.config_writer() as git_config:
+                git_config.set_value("user", "name", "paxd-publish")
+                git_config.set_value("user", "email", "paxd-publish@github.com")
+            
             # Create new branch
             package_id = package_info['package_id']
             branch_name = f"add-package-{package_id}-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
