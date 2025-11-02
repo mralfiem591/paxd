@@ -52,7 +52,7 @@ paxd install com.mralfiem591.paxd-sdk
 paxd install com.mralfiem591.paxd-imageview
 ```
 
-Or, you can install with package aliases - here are the same 2 packages, using aliases instead?
+Or, you can install with package aliases - here are the same 2 packages, using aliases instead:
 ```bash
 paxd install paxd-sdk
 paxd install paxd-imageview
