@@ -1,11 +1,3 @@
-try:
-    import sentry_sdk # type: ignore
-    sentry_sdk.init("http://9c308685283f4ae0938e438ada47b9f4@homelab:9001/3", traces_sample_rate=0.15, attach_stacktrace=True, send_default_pii=False)
-except ImportError:
-    print("ERROR: sentry_sdk (pypi name: sentry-sdk) module is required but not found. FastxD usage can continue, but error reporting will not work.")
-    print("Please install the sentry-sdk module via 'pip install sentry-sdk' to enable error reporting, and help us improve FastxD for everyone.")
-    print("We take anonymous error reporting seriously and do not collect any personal data.\n")
-
 # FastxD: A smaller version of PaxD, made to just download to a temp file, install one package, and delete itself.
 
 import requests
