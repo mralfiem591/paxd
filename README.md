@@ -52,6 +52,14 @@ paxd install com.mralfiem591.paxd-sdk
 paxd install com.mralfiem591.paxd-imageview
 ```
 
+Or, you can install with package aliases - here are the same 2 packages, using aliases instead?
+```bash
+paxd install paxd-sdk
+paxd install paxd-imageview
+```
+
+You can view all aliases in the [resolution file](resolution).
+
 ## 📋 Package Resolution
 
 The repository includes a comprehensive package resolution system that maps common aliases to package IDs. You can install packages using their full ID or common aliases defined in the [resolution](resolution) file.
