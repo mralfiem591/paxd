@@ -532,13 +532,19 @@ class PaxD:
 
         # If neither are found, try package.yaml
         
-        # If all 3 files failed, raise the original error
-        self._verbose_print("paxd, package.yaml and paxd.yaml files failed, raising error")
+        # If all 3 files failed, check if it's a 404 and provide a friendly error
+        self._verbose_print("paxd, package.yaml and paxd.yaml files failed, checking error type")
         package_response = requests.get(package_url, headers=self.headers, allow_redirects=True)  # type: ignore
-        package_response.raise_for_status()  # This will raise the original HTTP error
+        
+        if package_response.status_code == 404:
+            # Package not found - provide a user-friendly error
+            raise FileNotFoundError(f"Package '{package_name}' not found in repository")
+        else:
+            # Other HTTP error - raise the original error for debugging
+            package_response.raise_for_status()
         
         # This shouldn't be reached, but just in case
-        raise FileNotFoundError(f"Could not find package metadata for {package_name} (tried paxd, package.yaml and paxd.yaml)")
+        raise FileNotFoundError(f"Could not find package metadata for {package_name}")
 
     def install(self, package_name, user_requested=False, skip_checksum=False): # type: ignore
         """Install a package using the PaxD repository.
@@ -828,11 +834,24 @@ class PaxD:
         except FileNotFoundError as e:
             self._verbose_print(f"FileNotFoundError: {e}")
             self._verbose_timing_end(f"install {package_name}")
-            print(f"Error: {e}")
+            error_msg = str(e)
+            if "not found in repository" in error_msg:
+                print(f"{Fore.RED}Package '{Fore.YELLOW}{package_name}{Fore.RED}' was not found in the repository.")
+                print(f"{Fore.CYAN}Try searching for similar packages with: {Fore.GREEN}paxd search {package_name}")
+            else:
+                print(f"{Fore.RED}Error: {error_msg}")
+        except requests.HTTPError as e:
+            self._verbose_print(f"HTTPError: {e}")
+            self._verbose_timing_end(f"install {package_name}")
+            if hasattr(e, 'response') and e.response.status_code == 404:
+                print(f"{Fore.RED}Package '{Fore.YELLOW}{package_name}{Fore.RED}' was not found in the repository.")
+                print(f"{Fore.CYAN}Try searching for similar packages with: {Fore.GREEN}paxd search {package_name}")
+            else:
+                print(f"{Fore.RED}HTTP error: {e}")
         except requests.RequestException as e:
             self._verbose_print(f"RequestException: {e}")
             self._verbose_timing_end(f"install {package_name}")
-            print(f"Network error: {e}")
+            print(f"{Fore.RED}Network error: {e}")
         except json.JSONDecodeError as e:
             self._verbose_print(f"JSONDecodeError: {e}")
             self._verbose_timing_end(f"install {package_name}")
@@ -852,96 +871,155 @@ class PaxD:
         self._verbose_print(f"Uninstalling package: {package_name}")
         print(f"{Fore.RED}Uninstalling {Fore.CYAN}{package_name}{Fore.RED}...")
         
-        # Read and resolve repository URL
-        self._verbose_print("Reading and resolving repository URL for uninstall")
-        repo_url = self._read_repository_url()
-        repo_url = self._resolve_repository_url(repo_url)
-        local_app_data = os.path.join(os.path.expandvars(r"%LOCALAPPDATA%"), "PaxD")
-        self._verbose_print(f"Local app data directory: {local_app_data}")
-        
-        # GET {repo_url}/resolution
-        resolution_url = f"{repo_url}/resolution"
-        self._verbose_print(f"Fetching resolution data from: {resolution_url}")
-        resolution_response = requests.get(resolution_url, headers=self.headers, allow_redirects=True)  # type: ignore
-        self._verbose_print(f"GET {resolution_url}: {resolution_response.status_code}")
-        self._verbose_print(f"Resolution response status: {resolution_response.status_code}")
-        resolution_response.raise_for_status()
-        resolution_data = parse_jsonc(resolution_response.text)
-        self._verbose_print(f"Resolution data contains {len(resolution_data)} packages")
-        
-        # Check if package name needs to be resolved from alias to actual package name
-        self._verbose_print(f"Checking if '{package_name}' is an alias")
-        resolved_package = None
-        for actual_package, aliases in resolution_data.items():
-            if package_name in aliases:
-                resolved_package = actual_package
-                print(f"{Fore.BLUE}Resolving alias '{Fore.YELLOW}{package_name}{Fore.BLUE}' to '{Fore.CYAN}{resolved_package}{Fore.BLUE}'")
-                package_name = resolved_package
-                break
+        try:
+            # Read and resolve repository URL
+            self._verbose_print("Reading and resolving repository URL for uninstall")
+            repo_url = self._read_repository_url()
+            repo_url = self._resolve_repository_url(repo_url)
+            local_app_data = os.path.join(os.path.expandvars(r"%LOCALAPPDATA%"), "PaxD")
+            self._verbose_print(f"Local app data directory: {local_app_data}")
             
-        if package_name == "com.mralfiem591.paxd":
-            print(f"{Fore.RED}Cannot uninstall PaxD itself using PaxD. Please uninstall manually.")
-            return
-
-        # Fetch package metadata
-        self._verbose_print(f"Fetching package metadata for uninstall: {package_name}")
-        package_data, source_file = self._fetch_package_metadata(repo_url, package_name)
-        self._verbose_print(f"Successfully fetched metadata from {source_file}")
-        
-        # Check if package is actually installed
-        package_install_path = os.path.join(local_app_data, package_name)
-        if not os.path.exists(package_install_path):
-            if os.path.exists(os.path.join(os.path.dirname(os.path.abspath(__file__)), "bin", f"{package_data.get('install', {}).get('alias', package_name)}.bat")):
-                print(f"{Fore.YELLOW}Package '{Fore.CYAN}{package_name}{Fore.YELLOW}' is already not installed, but found leftover files. Cleaning up...")
-                os.remove(os.path.join(os.path.dirname(os.path.abspath(__file__)), "bin", f"{package_data.get('install', {}).get('alias', package_name)}.bat"))
-            print(f"{Fore.YELLOW}Package '{Fore.CYAN}{package_name}{Fore.YELLOW}' is already not installed.")
-            return
-        
-        pkg_name_friendly = f"{Fore.GREEN}{package_data.get('pkg_info', {}).get('pkg_name', package_name)}{Style.RESET_ALL}, by {Fore.MAGENTA}{package_data.get('pkg_info', {}).get('pkg_author', 'Unknown Author')}{Style.RESET_ALL} ({Fore.BLUE}{package_data.get('pkg_info', {}).get('pkg_version', 'Unknown Version')}{Style.RESET_ALL})"
-        print(f"{Fore.CYAN}Retrieved package metadata for '{pkg_name_friendly}'")
-        
-        # Remove the bat file from bin, if it exists
-        bat_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bin", f"{package_data.get('install', {}).get('alias', package_name)}.bat")
-        if os.path.exists(bat_file_path):
-            os.remove(bat_file_path)
-            print(f"{Fore.RED}Deleted {bat_file_path}")
-
-        # If package_data[uninstall][file] exists and has a value, run that file in a new shell window, closing it once it's done
-        uninstall_file = package_data.get("uninstall", {}).get("file")
-        if uninstall_file:
-            uninstall_file_path = os.path.join(local_app_data, package_name, uninstall_file)
-            if os.path.exists(uninstall_file_path) and uninstall_file.endswith(".py"):
-                print(f"{Fore.YELLOW}Running uninstall script {Fore.CYAN}{uninstall_file_path}{Fore.YELLOW}... Note that you may need to take action in another terminal window.")
-                self._verbose_print(f"Running uninstall script: {uninstall_file_path} in new cmd window")
-                subprocess.run(f"start cmd /c python {uninstall_file_path}", shell=True)
-                # Wait until the uninstall script is completed
-                input(f"{Fore.YELLOW}Press Enter once the uninstall script has completed (other window will close)...")
-                self._verbose_print("Uninstall script completed")
-        
-        # Clean up dependencies before deleting the package
-        deps_file = os.path.join(local_app_data, package_name, ".DEPENDENCIES")
-        if os.path.exists(deps_file):
-            with open(deps_file, 'r') as f:
-                for line in f:
-                    dep = line.strip()
-                    if dep and dep.startswith("paxd:"):
-                        paxd_package = dep[len("paxd:"):]
-                        self._remove_dependency_reference(paxd_package, package_name)
+            # GET {repo_url}/resolution
+            resolution_url = f"{repo_url}/resolution"
+            self._verbose_print(f"Fetching resolution data from: {resolution_url}")
+            resolution_response = requests.get(resolution_url, headers=self.headers, allow_redirects=True)  # type: ignore
+            self._verbose_print(f"GET {resolution_url}: {resolution_response.status_code}")
+            self._verbose_print(f"Resolution response status: {resolution_response.status_code}")
+            resolution_response.raise_for_status()
+            resolution_data = parse_jsonc(resolution_response.text)
+            self._verbose_print(f"Resolution data contains {len(resolution_data)} packages")
+            
+            # Check if package name needs to be resolved from alias to actual package name
+            self._verbose_print(f"Checking if '{package_name}' is an alias")
+            resolved_package = None
+            for actual_package, aliases in resolution_data.items():
+                if package_name in aliases:
+                    resolved_package = actual_package
+                    print(f"{Fore.BLUE}Resolving alias '{Fore.YELLOW}{package_name}{Fore.BLUE}' to '{Fore.CYAN}{resolved_package}{Fore.BLUE}'")
+                    package_name = resolved_package
+                    break
                 
-        # Now for the fun part - deleting the package folder from %LOCALAPPDATA%/<package_name>
-        self._verbose_print(f"Deleting package folder: {package_name} at {package_install_path}")
-        package_folder = os.path.join(local_app_data, package_name)
-        if os.path.exists(package_folder):
-            shutil.rmtree(package_folder, onerror=permission_handler)
-            # Check package folder is deleted
-            if not os.path.exists(package_folder):
-                print(f"{Fore.GREEN}✓ Successfully uninstalled '{Fore.CYAN}{package_name}{Fore.GREEN}' - deleted package folder {package_folder}")
-                self._verbose_print(f"Successfully uninstalled package: {package_name}")
-            else:
-                print(f"{Fore.RED}Failed to delete package folder {package_folder}")
-                self._verbose_print(f"Failed to delete package folder: {package_folder}")
+            if package_name == "com.mralfiem591.paxd":
+                print(f"{Fore.RED}Cannot uninstall PaxD itself using PaxD. Please uninstall manually.")
+                return
 
-    def update(self, package_name=None, force=False, skip_checksum=False):
+            # Fetch package metadata
+            self._verbose_print(f"Fetching package metadata for uninstall: {package_name}")
+            package_data, source_file = self._fetch_package_metadata(repo_url, package_name)
+            self._verbose_print(f"Successfully fetched metadata from {source_file}")
+            
+            # Check if package is actually installed
+            package_install_path = os.path.join(local_app_data, package_name)
+            if not os.path.exists(package_install_path):
+                if os.path.exists(os.path.join(os.path.dirname(os.path.abspath(__file__)), "bin", f"{package_data.get('install', {}).get('alias', package_name)}.bat")):
+                    print(f"{Fore.YELLOW}Package '{Fore.CYAN}{package_name}{Fore.YELLOW}' is already not installed, but found leftover files. Cleaning up...")
+                    os.remove(os.path.join(os.path.dirname(os.path.abspath(__file__)), "bin", f"{package_data.get('install', {}).get('alias', package_name)}.bat"))
+                print(f"{Fore.YELLOW}Package '{Fore.CYAN}{package_name}{Fore.YELLOW}' is already not installed.")
+                return
+            
+            pkg_name_friendly = f"{Fore.GREEN}{package_data.get('pkg_info', {}).get('pkg_name', package_name)}{Style.RESET_ALL}, by {Fore.MAGENTA}{package_data.get('pkg_info', {}).get('pkg_author', 'Unknown Author')}{Style.RESET_ALL} ({Fore.BLUE}{package_data.get('pkg_info', {}).get('pkg_version', 'Unknown Version')}{Style.RESET_ALL})"
+            print(f"{Fore.CYAN}Retrieved package metadata for '{pkg_name_friendly}'")
+            
+            # Remove the bat file from bin, if it exists
+            bat_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bin", f"{package_data.get('install', {}).get('alias', package_name)}.bat")
+            if os.path.exists(bat_file_path):
+                os.remove(bat_file_path)
+                print(f"{Fore.RED}Deleted {bat_file_path}")
+
+            # If package_data[uninstall][file] exists and has a value, run that file in a new shell window, closing it once it's done
+            uninstall_file = package_data.get("uninstall", {}).get("file")
+            if uninstall_file:
+                uninstall_file_path = os.path.join(local_app_data, package_name, uninstall_file)
+                if os.path.exists(uninstall_file_path) and uninstall_file.endswith(".py"):
+                    print(f"{Fore.YELLOW}Running uninstall script {Fore.CYAN}{uninstall_file_path}{Fore.YELLOW}... Note that you may need to take action in another terminal window.")
+                    self._verbose_print(f"Running uninstall script: {uninstall_file_path} in new cmd window")
+                    subprocess.run(f"start cmd /c python {uninstall_file_path}", shell=True)
+                    # Wait until the uninstall script is completed
+                    input(f"{Fore.YELLOW}Press Enter once the uninstall script has completed (other window will close)...")
+                    self._verbose_print("Uninstall script completed")
+            
+            # Clean up dependencies before deleting the package
+            deps_file = os.path.join(local_app_data, package_name, ".DEPENDENCIES")
+            if os.path.exists(deps_file):
+                with open(deps_file, 'r') as f:
+                    for line in f:
+                        dep = line.strip()
+                        if dep and dep.startswith("paxd:"):
+                            paxd_package = dep[len("paxd:"):]
+                            self._remove_dependency_reference(paxd_package, package_name)
+                    
+            # Now for the fun part - deleting the package folder from %LOCALAPPDATA%/<package_name>
+            self._verbose_print(f"Deleting package folder: {package_name} at {package_install_path}")
+            package_folder = os.path.join(local_app_data, package_name)
+            if os.path.exists(package_folder):
+                shutil.rmtree(package_folder, onerror=permission_handler)
+                # Check package folder is deleted
+                if not os.path.exists(package_folder):
+                    print(f"{Fore.GREEN}✓ Successfully uninstalled '{Fore.CYAN}{package_name}{Fore.GREEN}' - deleted package folder {package_folder}")
+                    self._verbose_print(f"Successfully uninstalled package: {package_name}")
+                else:
+                    print(f"{Fore.RED}Failed to delete package folder {package_folder}")
+                    self._verbose_print(f"Failed to delete package folder: {package_folder}")
+                    
+        except FileNotFoundError as e:
+            self._verbose_print(f"FileNotFoundError in uninstall: {e}")
+            self._verbose_timing_end(f"uninstall {package_name}")
+            error_msg = str(e)
+            if "not found in repository" in error_msg:
+                print(f"{Fore.RED}Package '{Fore.YELLOW}{package_name}{Fore.RED}' was not found in the repository.")
+                print(f"{Fore.YELLOW}Note: This might mean the package was removed from the repository.")
+                print(f"{Fore.CYAN}You can still try to uninstall locally installed files if they exist.")
+                # Try to uninstall local files even if not in repository
+                local_app_data = os.path.join(os.path.expandvars(r"%LOCALAPPDATA%"), "PaxD")
+                package_folder = os.path.join(local_app_data, package_name)
+                if os.path.exists(package_folder):
+                    print(f"{Fore.YELLOW}Found local installation, attempting cleanup...")
+                    try:
+                        shutil.rmtree(package_folder, onerror=permission_handler)
+                        if not os.path.exists(package_folder):
+                            print(f"{Fore.GREEN}✓ Successfully removed local files for '{Fore.CYAN}{package_name}{Fore.GREEN}'")
+                        else:
+                            print(f"{Fore.RED}Failed to remove local files for '{package_name}'")
+                    except Exception as cleanup_error:
+                        print(f"{Fore.RED}Error during cleanup: {cleanup_error}")
+                else:
+                    print(f"{Fore.YELLOW}Package '{Fore.CYAN}{package_name}{Fore.YELLOW}' is not installed locally.")
+            else:
+                print(f"{Fore.RED}Error: {error_msg}")
+        except requests.HTTPError as e:
+            self._verbose_print(f"HTTPError in uninstall: {e}")
+            self._verbose_timing_end(f"uninstall {package_name}")
+            if hasattr(e, 'response') and e.response.status_code == 404:
+                print(f"{Fore.RED}Package '{Fore.YELLOW}{package_name}{Fore.RED}' was not found in the repository.")
+                print(f"{Fore.YELLOW}Note: This might mean the package was removed from the repository.")
+                print(f"{Fore.CYAN}You can still try to uninstall locally installed files if they exist.")
+                # Try to uninstall local files even if not in repository
+                local_app_data = os.path.join(os.path.expandvars(r"%LOCALAPPDATA%"), "PaxD")
+                package_folder = os.path.join(local_app_data, package_name)
+                if os.path.exists(package_folder):
+                    print(f"{Fore.YELLOW}Found local installation, attempting cleanup...")
+                    try:
+                        shutil.rmtree(package_folder, onerror=permission_handler)
+                        if not os.path.exists(package_folder):
+                            print(f"{Fore.GREEN}✓ Successfully removed local files for '{Fore.CYAN}{package_name}{Fore.GREEN}'")
+                        else:
+                            print(f"{Fore.RED}Failed to remove local files for '{package_name}'")
+                    except Exception as cleanup_error:
+                        print(f"{Fore.RED}Error during cleanup: {cleanup_error}")
+                else:
+                    print(f"{Fore.YELLOW}Package '{Fore.CYAN}{package_name}{Fore.YELLOW}' is not installed locally.")
+            else:
+                print(f"{Fore.RED}HTTP error: {e}")
+        except requests.RequestException as e:
+            self._verbose_print(f"RequestException in uninstall: {e}")
+            self._verbose_timing_end(f"uninstall {package_name}")
+            print(f"{Fore.RED}Network error: {e}")
+        except Exception as e:
+            self._verbose_print(f"Unexpected error in uninstall: {e}")
+            self._verbose_timing_end(f"uninstall {package_name}")
+            print(f"{Fore.RED}Unexpected error: {e}")
+
+    def update(self, package_name=None, force=False, skip_checksum=False): # type: ignore
         """Update a package to the latest version."""
         self._verbose_timing_start(f"update {package_name}")
         self._verbose_print(f"Updating package: {package_name} (force={force})")
@@ -1174,11 +1252,32 @@ class PaxD:
                 print(f"{Fore.YELLOW}Excluded from update: {Fore.WHITE}{', '.join(excluded_files)}")
                 
         except FileNotFoundError as e:
-            print(f"Error: {e}")
+            self._verbose_print(f"FileNotFoundError in update: {e}")
+            self._verbose_timing_end(f"update {package_name}")
+            error_msg = str(e)
+            if "not found in repository" in error_msg:
+                print(f"{Fore.RED}Package '{Fore.YELLOW}{package_name}{Fore.RED}' was not found in the repository.")
+                print(f"{Fore.YELLOW}The package might have been removed from the repository or renamed.")
+                print(f"{Fore.CYAN}Try searching for similar packages with: {Fore.GREEN}paxd search {package_name}")
+            else:
+                print(f"{Fore.RED}Error: {error_msg}")
+            # Clean up backup files on error
+            self._cleanup_backup_files(backup_files, "error cleanup")
+        except requests.HTTPError as e:
+            self._verbose_print(f"HTTPError in update: {e}")
+            self._verbose_timing_end(f"update {package_name}")
+            if hasattr(e, 'response') and e.response.status_code == 404:
+                print(f"{Fore.RED}Package '{Fore.YELLOW}{package_name}{Fore.RED}' was not found in the repository.")
+                print(f"{Fore.YELLOW}The package might have been removed from the repository or renamed.")
+                print(f"{Fore.CYAN}Try searching for similar packages with: {Fore.GREEN}paxd search {package_name}")
+            else:
+                print(f"{Fore.RED}HTTP error: {e}")
             # Clean up backup files on error
             self._cleanup_backup_files(backup_files, "error cleanup")
         except requests.RequestException as e:
-            print(f"Network error: {e}")
+            self._verbose_print(f"RequestException in update: {e}")
+            self._verbose_timing_end(f"update {package_name}")
+            print(f"{Fore.RED}Network error: {e}")
             # Clean up backup files on error
             self._cleanup_backup_files(backup_files, "error cleanup")
         except json.JSONDecodeError as e:
