@@ -12,3 +12,5 @@ README.html
 vulnerability_issue_creator.py
 .env
 __pycache__/
+*.pyc
+*.cpython
