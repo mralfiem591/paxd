@@ -64,6 +64,14 @@ Security is a priority for the PaxD ecosystem. Known vulnerabilities are tracked
 
 If you discover a security vulnerability in any package, please report it through the appropriate channels.
 
+### Vulnerability Scanning
+
+You can scan for vulnerabilities by installing the `paxd-vulnscan` tool, via `paxd install paxd-vulnscan`, and running it with `paxd-vulnscan`.
+
+### Vulnerability Viewing and Searching
+
+Vulnerabilities will be tracked via GitHub Issues. A bot is set up to handle this, and you can easily view them via Issues on the topbar. They are tagged for ease of use, and will be automatically updated if anything happpens.
+
 ## 🏅 Certified & Official Packages
 
 Packages in this repository are marked as:
