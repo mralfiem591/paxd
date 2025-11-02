@@ -5,8 +5,6 @@ favicon.ico
 generate_package_docs.py
 hasher.py
 log_watcher.py
-paxd-installer.py
-fastxd.py
 */README.html
 favicon.ico
 repoasset/favicon.ico
