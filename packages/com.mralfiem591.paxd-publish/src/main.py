@@ -19,7 +19,7 @@ from datetime import datetime
 
 try:
     import requests
-    from github import Github, GithubException, Auth
+    from github import Github, Auth
     import git
 except ImportError as e:
     print(f"Error: Missing required dependency: {e}")
