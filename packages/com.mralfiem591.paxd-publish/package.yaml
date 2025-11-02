@@ -31,4 +31,4 @@ install:
   updaterun: false
   exclude_from_updates: []
   main_executable: main.py
-  command_alias: paxd-publish
+  command_alias: paxdp

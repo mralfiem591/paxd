@@ -27,5 +27,10 @@
         "paxd-vulnscan",
         "paxd-vulnerability-scanner",
         "paxd-vulnerability"
+    ],
+    "com.mralfiem591.paxd-publish": [
+        "paxd-publish",
+        "paxdp",
+        "paxd-publisher"
     ]
 }
