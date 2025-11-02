@@ -408,16 +408,16 @@ def main():
         epilog="""
 Examples:
   # Publish package from current directory
-  paxd-publish
+  paxdp
   
   # Publish package from specific directory
-  paxd-publish --dir ./my-package
-  
+  paxdp --dir ./my-package
+
   # Include a custom message about changes
-  paxd-publish --message "Fixed critical bug in authentication module"
-  
+  paxdp --message "Fixed critical bug in authentication module"
+
   # Use custom repository
-  paxd-publish --owner myuser --repo myrepo
+  paxdp --owner myuser --repo myrepo
 
 Environment Variables:
   PAXD_GH_TOKEN: GitHub personal access token (required)
