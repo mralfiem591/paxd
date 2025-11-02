@@ -3,7 +3,7 @@
 
 name: PaxD ImageView
 author: mralfiem591
-version: 1.1.4
+version: 1.1.2
 description: A simple image viewer used by PaxD.
 license: MIT
 tags:
@@ -21,6 +21,7 @@ install:
     - requests
     - Pillow
     - ascii_magic
+    - sentry-sdk
   firstrun: false
   updaterun: false
   main_executable: imageview.py
