@@ -19,7 +19,7 @@ from datetime import datetime
 
 try:
     import requests
-    from github import Github, GithubException # type: ignore # In yaml dependencies
+    from github import Github, GithubException, Auth # type: ignore # In yaml dependencies
     import git # type: ignore # In yaml dependencies
 except ImportError as e:
     print(f"Error: Missing required dependency: {e}")
@@ -34,7 +34,10 @@ class PaxDPackagePublisher:
         self.github_token = github_token
         self.repo_owner = repo_owner
         self.repo_name = repo_name
-        self.github = Github(github_token)
+        
+        # Use the new authentication method to avoid deprecation warning
+        auth = Auth.Token(github_token)
+        self.github = Github(auth=auth)
         self.repo = self.github.get_repo(f"{repo_owner}/{repo_name}")
 
     def validate_package_structure(self, package_dir: Path) -> Dict[str, Any]:
@@ -112,13 +115,24 @@ class PaxDPackagePublisher:
         
         # Validate package name format
         author = manifest.get('author', '')
-        package_name = f"com.{author}.{manifest.get('name', '').lower().replace(' ', '-')}"
-        expected_name = package_name.replace(' ', '-')
+        if not author:
+            results['errors'].append("Package author is required but not specified in manifest")
+            results['valid'] = False
+            return results
+            
+        package_name = manifest.get('name', '')
+        if not package_name:
+            results['errors'].append("Package name is required but not specified in manifest")
+            results['valid'] = False
+            return results
+            
+        # Generate package ID - use author as publisher
+        package_id = f"com.{author}.{package_name.lower().replace(' ', '-')}"
         
-        if package_dir.name != expected_name:
-            results['warnings'].append(f"Directory name '{package_dir.name}' doesn't match expected '{expected_name}'")
+        if package_dir.name != package_id:
+            results['warnings'].append(f"Directory name '{package_dir.name}' doesn't match expected '{package_id}'")
         
-        results['package_info']['package_id'] = expected_name
+        results['package_info']['package_id'] = package_id
         
         return results
 
@@ -249,7 +263,7 @@ class PaxDPackagePublisher:
             repo.git.add('packages/')
             
             # Check if there are changes to commit
-            if not repo.is_dirty(staged=True):
+            if not repo.is_dirty() and not repo.index.diff("HEAD"):
                 print("  ⚠️  No changes detected - package may already exist")
                 return None
             
@@ -398,7 +412,7 @@ Environment Variables:
     parser.add_argument(
         '--owner',
         default='mralfiem591',
-        help='GitHub repository owner (default: mralfiem591)'
+        help='GitHub repository owner (default: mralfiem591 - this is where the PaxD repository is located)'
     )
     parser.add_argument(
         '--repo',
