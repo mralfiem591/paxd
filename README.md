@@ -10,6 +10,7 @@ The official default repository for PaxD packages, and home to the official PaxD
 Want to use PaxD, without fully installing it? **Try FastxD, the more temporary solution!**: `curl -L -o %TEMP%\fastxd.py https://raw.githubusercontent.com/mralfiem591/paxd/refs/heads/main/fastxd.py && python %TEMP%\fastxd.py`
 
 #### NOTE: both of these, and PaxD itself, **require Python 3.x or above!**
+#### You can find a repository to use below, in the "Links" section.
 
 ## 📦 About
 
@@ -98,8 +99,8 @@ Please ensure your contributions follow the existing patterns and maintain compa
 
 ## 🔗 Links
 
-- Repository: [github.com/mralfiem591/paxd-default-repository](https://github.com/mralfiem591/paxd)
 - Repository (ready for use in repository file): `optimised::https://raw.githubusercontent.com/mralfiem591/paxd/refs/heads/main`
+- Repository (ready for use with FastxD and installer): `https://raw.githubusercontent.com/mralfiem591/paxd/refs/heads/main`
 - Author: [@mralfiem591](https://github.com/mralfiem591)
 
 ## 📊 Repository Structure
