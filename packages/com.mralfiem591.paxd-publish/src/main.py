@@ -1,0 +1,389 @@
+#!/usr/bin/env python3
+"""
+PaxD Package Publisher
+
+This tool validates and publishes PaxD packages to the repository via GitHub Pull Request.
+"""
+
+import os
+import sys
+import json
+import yaml
+import shutil
+import argparse
+import tempfile
+import subprocess
+from pathlib import Path
+from typing import Dict, List, Any, Optional
+from datetime import datetime
+
+try:
+    import requests
+    from github import Github, GithubException # type: ignore # In yaml dependencies
+    import git # type: ignore # In yaml dependencies
+except ImportError as e:
+    print(f"Error: Missing required dependency: {e}")
+    print("Please install required packages:")
+    print("pip install requests PyGithub gitpython pyyaml")
+    sys.exit(1)
+
+
+class PaxDPackagePublisher:
+    def __init__(self, github_token: str, repo_owner: str = "mralfiem591", repo_name: str = "paxd"):
+        """Initialize the package publisher."""
+        self.github_token = github_token
+        self.repo_owner = repo_owner
+        self.repo_name = repo_name
+        self.github = Github(github_token)
+        self.repo = self.github.get_repo(f"{repo_owner}/{repo_name}")
+
+    def validate_package_structure(self, package_dir: Path) -> Dict[str, Any]:
+        """
+        Validate the local package structure.
+        
+        Returns:
+            Dict containing validation results and package metadata
+        """
+        print("🔍 Validating package structure...")
+        
+        results = {
+            'valid': True,
+            'errors': [],
+            'warnings': [],
+            'package_info': {}
+        }
+        
+        # Check for manifest file (package.yaml or paxd.yaml)
+        manifest_file = None
+        for filename in ['package.yaml', 'paxd.yaml']:
+            manifest_path = package_dir / filename
+            if manifest_path.exists():
+                manifest_file = manifest_path
+                break
+        
+        if not manifest_file:
+            results['errors'].append("No package manifest found (package.yaml or paxd.yaml)")
+            results['valid'] = False
+            return results
+        
+        # Parse manifest
+        try:
+            with open(manifest_file, 'r', encoding='utf-8') as f:
+                manifest = yaml.safe_load(f)
+            
+            results['package_info'] = manifest
+            print(f"  ✅ Found manifest: {manifest_file.name}")
+            
+        except yaml.YAMLError as e:
+            results['errors'].append(f"Invalid YAML in manifest: {e}")
+            results['valid'] = False
+            return results
+        
+        # Validate required manifest fields
+        required_fields = ['name', 'author', 'version', 'description']
+        for field in required_fields:
+            if field not in manifest:
+                results['errors'].append(f"Missing required field '{field}' in manifest")
+                results['valid'] = False
+        
+        # Check for src/ directory
+        src_dir = package_dir / 'src'
+        if not src_dir.exists() or not src_dir.is_dir():
+            results['errors'].append("Missing src/ directory")
+            results['valid'] = False
+        else:
+            print(f"  ✅ Found src/ directory")
+            
+            # Check if src/ has any files
+            src_files = list(src_dir.glob('*'))
+            if not src_files:
+                results['warnings'].append("src/ directory is empty")
+            else:
+                print(f"  📁 Found {len(src_files)} files in src/")
+        
+        # Check for paxd executable (optional)
+        paxd_file = package_dir / 'paxd'
+        if paxd_file.exists():
+            print(f"  ✅ Found paxd executable")
+        
+        # Validate package name format
+        author = manifest.get('author', '')
+        package_name = f"com.{author}.{manifest.get('name', '').lower().replace(' ', '-')}"
+        expected_name = package_name.replace(' ', '-')
+        
+        if package_dir.name != expected_name:
+            results['warnings'].append(f"Directory name '{package_dir.name}' doesn't match expected '{expected_name}'")
+        
+        results['package_info']['package_id'] = expected_name
+        
+        return results
+
+    def create_package_structure(self, package_dir: Path, target_dir: Path, package_info: Dict[str, Any]) -> bool:
+        """
+        Create the proper package structure in the target directory.
+        
+        Args:
+            package_dir: Source package directory
+            target_dir: Target directory for the package
+            package_info: Package metadata from manifest
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        print(f"📦 Creating package structure...")
+        
+        try:
+            package_id = package_info['package_id']
+            target_package_dir = target_dir / "packages" / package_id
+            
+            # Create target directory
+            target_package_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Copy all files from source to target
+            for item in package_dir.iterdir():
+                if item.name.startswith('.'):
+                    continue
+                    
+                target_item = target_package_dir / item.name
+                
+                if item.is_dir():
+                    if target_item.exists():
+                        shutil.rmtree(target_item)
+                    shutil.copytree(item, target_item)
+                else:
+                    shutil.copy2(item, target_item)
+            
+            print(f"  ✅ Package structure created at: packages/{package_id}")
+            return True
+            
+        except Exception as e:
+            print(f"  ❌ Error creating package structure: {e}")
+            return False
+
+    def create_pull_request(self, package_info: Dict[str, Any], temp_dir: Path) -> Optional[str]:
+        """
+        Create a pull request with the package.
+        
+        Args:
+            package_info: Package metadata
+            temp_dir: Temporary directory containing the repo
+            
+        Returns:
+            URL of the created PR or None if failed
+        """
+        print("🚀 Creating pull request...")
+        
+        try:
+            # Initialize git repo
+            repo_path = temp_dir / "repo"
+            repo = git.Repo.clone_from(
+                f"https://{self.github_token}@github.com/{self.repo_owner}/{self.repo_name}.git",
+                repo_path
+            )
+            
+            # Create new branch
+            package_id = package_info['package_id']
+            branch_name = f"add-package-{package_id}-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+            
+            repo.git.checkout('HEAD', b=branch_name)
+            
+            # Copy package files to repo
+            success = self.create_package_structure(
+                Path.cwd(),  # Current directory (where user ran the command)
+                repo_path,
+                package_info
+            )
+            
+            if not success:
+                return None
+            
+            # Add files to git
+            repo.git.add('packages/')
+            
+            # Check if there are changes to commit
+            if not repo.is_dirty(staged=True):
+                print("  ⚠️  No changes detected - package may already exist")
+                return None
+            
+            # Commit changes
+            commit_message = f"Add package {package_id} v{package_info.get('version', 'unknown')}\n\nAutomatically published via paxd-publish"
+            repo.git.commit('-m', commit_message)
+            
+            # Push branch
+            origin = repo.remote('origin')
+            origin.push(branch_name)
+            
+            # Create PR
+            pr_title = f"Add package: {package_info.get('name', package_id)} v{package_info.get('version', 'unknown')}"
+            pr_body = f"""## Package Submission
+
+**Package ID:** `{package_id}`
+**Name:** {package_info.get('name', 'Unknown')}
+**Version:** {package_info.get('version', 'unknown')}
+**Author:** {package_info.get('author', 'Unknown')}
+**Description:** {package_info.get('description', 'No description provided')}
+
+### Package Details
+- **License:** {package_info.get('license', 'Not specified')}
+- **Tags:** {', '.join(package_info.get('tags', []))}
+
+### Files Included
+- Package manifest (`package.yaml` or `paxd.yaml`)
+- Source files in `src/` directory
+{('- PaxD executable (`paxd`)' if Path('paxd').exists() else '')}
+
+---
+*This PR was created automatically by paxd-publish*"""
+
+            pr = self.repo.create_pull(
+                title=pr_title,
+                body=pr_body,
+                head=branch_name,
+                base="main"
+            )
+            
+            print(f"  ✅ Pull request created: {pr.html_url}")
+            return pr.html_url
+            
+        except Exception as e:
+            print(f"  ❌ Error creating pull request: {e}")
+            return None
+
+    def publish_package(self, package_dir: Optional[Path] = None) -> bool:
+        """
+        Main method to publish a package.
+        
+        Args:
+            package_dir: Directory containing the package (defaults to current directory)
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        if package_dir is None:
+            package_dir = Path.cwd()
+        
+        print(f"🎯 Publishing package from: {package_dir}")
+        
+        # Validate package
+        validation = self.validate_package_structure(package_dir)
+        
+        # Report validation results
+        if validation['errors']:
+            print("\n❌ Validation errors:")
+            for error in validation['errors']:
+                print(f"  - {error}")
+        
+        if validation['warnings']:
+            print("\n⚠️  Warnings:")
+            for warning in validation['warnings']:
+                print(f"  - {warning}")
+        
+        if not validation['valid']:
+            print("\n💥 Package validation failed. Please fix the errors above.")
+            return False
+        
+        print(f"\n✅ Package validation successful!")
+        package_info = validation['package_info']
+        
+        print(f"📋 Package Info:")
+        print(f"  - Name: {package_info.get('name')}")
+        print(f"  - Author: {package_info.get('author')}")
+        print(f"  - Version: {package_info.get('version')}")
+        print(f"  - Package ID: {package_info['package_id']}")
+        
+        # Create temporary directory for git operations
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            
+            # Create PR
+            pr_url = self.create_pull_request(package_info, temp_path)
+            
+            if pr_url:
+                print(f"\n🎉 Package published successfully!")
+                print(f"📄 Pull Request: {pr_url}")
+                print(f"⏳ Your package will be available after the PR is reviewed and merged.")
+                return True
+            else:
+                print(f"\n💥 Failed to create pull request.")
+                return False
+
+
+def main():
+    """Main entry point."""
+    parser = argparse.ArgumentParser(
+        description="Publish PaxD packages to the repository",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Publish package from current directory
+  paxd-publish
+  
+  # Publish package from specific directory
+  paxd-publish --dir ./my-package
+  
+  # Use custom repository
+  paxd-publish --owner myuser --repo myrepo
+
+Environment Variables:
+  PAXD_GH_TOKEN: GitHub personal access token (required)
+        """
+    )
+    
+    parser.add_argument(
+        '--dir',
+        type=Path,
+        default=Path.cwd(),
+        help='Directory containing the package to publish (default: current directory)'
+    )
+    parser.add_argument(
+        '--owner',
+        default='mralfiem591',
+        help='GitHub repository owner (default: mralfiem591)'
+    )
+    parser.add_argument(
+        '--repo',
+        default='paxd',
+        help='GitHub repository name (default: paxd)'
+    )
+    parser.add_argument(
+        '--token',
+        help='GitHub token (or set PAXD_GH_TOKEN env var)'
+    )
+    
+    args = parser.parse_args()
+    
+    # Get GitHub token
+    github_token = args.token or os.getenv('PAXD_GH_TOKEN')
+    if not github_token:
+        print("❌ Error: GitHub token is required.")
+        print("Set the PAXD_GH_TOKEN environment variable or use --token option.")
+        print("Get a token from: https://github.com/settings/tokens")
+        sys.exit(1)
+    
+    # Validate directory
+    if not args.dir.exists():
+        print(f"❌ Error: Directory does not exist: {args.dir}")
+        sys.exit(1)
+    
+    if not args.dir.is_dir():
+        print(f"❌ Error: Path is not a directory: {args.dir}")
+        sys.exit(1)
+    
+    # Create publisher and publish package
+    try:
+        publisher = PaxDPackagePublisher(
+            github_token=github_token,
+            repo_owner=args.owner,
+            repo_name=args.repo
+        )
+        
+        success = publisher.publish_package(args.dir)
+        sys.exit(0 if success else 1)
+        
+    except Exception as e:
+        print(f"💥 Unexpected error: {e}")
+        sys.exit(1)
+
+
+if __name__ == '__main__':
+    main()
