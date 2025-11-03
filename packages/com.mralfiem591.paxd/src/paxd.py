@@ -356,8 +356,8 @@ class PaxD:
         self.repository_file = os.path.join(os.path.dirname(__file__), "repository")
         self.paxd_version = "1.6.5"
         self.paxd_version_phrase = "The Authentication Update"
-        # Check if a PAXD-GH-AUTH environment variable is set for authentication
-        self.paxd_auth_token = os.getenv("PAXD-GH-AUTH", None)
+        # Check if a PAXD_GH_TOKEN environment variable is set for authentication
+        self.paxd_auth_token = os.getenv("PAXD_GH_TOKEN", None)
         if self.paxd_auth_token:
             self.paxd_version_phrase += " (Authenticated)"
             self.headers = {"User-Agent": f"PaxdClient/{self.paxd_version}", "Authorization": f"token {self.paxd_auth_token}"}
@@ -2210,8 +2210,8 @@ def main():
         print(f"{Fore.RED}Please run PaxD on a Windows device!")
         exit(1)
         
-    if not os.getenv("PAXD-GH-AUTH", None):
-        print(f"{Fore.YELLOW}Warning: No authentication token found. You may encounter rate limiting. It is highly recommended to set one up, and set PAXD-GH-AUTH environment variable.{Style.RESET_ALL}")
+    if not os.getenv("PAXD_GH_TOKEN", None):
+        print(f"{Fore.YELLOW}Warning: No authentication token found. You may encounter rate limiting. It is highly recommended to set one up, and set PAXD_GH_TOKEN environment variable.{Style.RESET_ALL}")
         
     # If repository is unoptimised, optimise it
     with open(os.path.join(os.path.dirname(__file__), "repository"), 'r+') as repo_file:
