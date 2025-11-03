@@ -38,3 +38,4 @@ install:
     - repository
   main_executable: paxd.py
   command_alias: paxd
+  supports_fastxd: false

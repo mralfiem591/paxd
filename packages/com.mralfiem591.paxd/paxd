@@ -30,6 +30,7 @@
             "repository"
         ],
         "mainfile": "paxd.py",
-        "alias": "paxd"
+        "alias": "paxd",
+        "supports-fastxd": false
     }
 }

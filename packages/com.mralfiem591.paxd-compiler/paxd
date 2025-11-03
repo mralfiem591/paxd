@@ -19,6 +19,7 @@
         "firstrun": false,
         "updaterun": false,
         "mainfile": "main.py",
-        "alias": "paxd-compile"
+        "alias": "paxd-compile",
+        "supports-fastxd": true
     }
 }

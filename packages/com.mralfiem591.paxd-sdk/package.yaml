@@ -16,3 +16,4 @@ install:
   firstrun: false
   updaterun: false
   exclude_from_updates: []
+  supports_fastxd: false

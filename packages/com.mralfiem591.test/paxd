@@ -21,6 +21,6 @@
         "updaterun": false,
         "mainfile": "test.py",
         "alias": "paxd-test",
-        "supports-fastxd": false
+        "supports-fastxd": true
     }
 }

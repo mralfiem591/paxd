@@ -116,7 +116,7 @@ def decompile_paxd_manifest(manifest_data: Dict[str, Any]) -> Dict[str, Any]:
         install_config["checksums"] = install_data["checksum"]
     
     # Handle boolean settings
-    for yaml_key, manifest_key in [("firstrun", "firstrun"), ("updaterun", "updaterun")]:
+    for yaml_key, manifest_key in [("firstrun", "firstrun"), ("updaterun", "updaterun"), ("supports_fastxd", "supports-fastxd")]:
         if manifest_key in install_data:
             install_config[yaml_key] = install_data[manifest_key]
     
@@ -203,6 +203,12 @@ def compile_paxd_manifest(yaml_data: Dict[str, Any]) -> Dict[str, Any]:
     for setting in optional_bool_settings:
         if setting in install_config:
             manifest["install"][setting] = install_config[setting]
+    
+    # Handle supports-fastxd flag with default value of true
+    if "supports_fastxd" in install_config:
+        manifest["install"]["supports-fastxd"] = install_config["supports_fastxd"]
+    else:
+        manifest["install"]["supports-fastxd"] = True
     
     # Handle exclude from updates
     if "exclude_from_updates" in install_config:

@@ -36,7 +36,8 @@
             "repository"
         ],
         "mainfile": "paxd.py", // What is the main executable file for this package? (optional, only needed for PATH)
-        "alias": "paxd" // What command line alias should we create for this package's main executable file? (optional, only needed for PATH)
+        "alias": "paxd", // What command line alias should we create for this package's main executable file? (optional, only needed for PATH)
+        "supports-fastxd": false // Does this package support installation via FastxD? (optional, defaults to true)
     }
     // uninstall: {
     //    file: " ... " // Optional uninstall script to run when uninstalling this package, filename is in same format as mainfile (aka. in src/).
