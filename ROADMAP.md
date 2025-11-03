@@ -20,7 +20,7 @@ Welcome to the roadmap of **PaxD**! This document outlines our vision, goals, an
 |-|-|-|-|
 | Enhanced logging system | Implement a more detailed logging system to track application events and errors |🟢 Completed | Released immediately |
 | PaxD SDK | Develop a Software Development Kit (SDK) for PaxD to facilitate package development | 🟢 Completed | Released immediately |
-| Improved package management | Refine the package management system for better performance and usability | 🟢 Completed | TBR with 1.7.0 |
+| Improved pip support | Improve support for pip and increase speed when installing or updating | 🟣 In Testing | Planned TBR with 1.7.0 |
 | PaxDP CLI package | Create a command-line interface (CLI) tool for PaxD to streamline package publishing and updating | 🟢 Completed | Released immediately |
 
 ### Version 1.8.0
