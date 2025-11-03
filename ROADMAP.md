@@ -14,13 +14,13 @@ Welcome to the roadmap of **PaxD**! This document outlines our vision, goals, an
 | paxd-vulnerability included by default | Integrate paxd-vulnerability scanner into the core PaxD package for improved security | 🟠 Planned |
 | Manifest supports-fastxd flag | Allow packages to specify a `supports-fastxd` flag in their manifest to indicate compatibility with FastxD | 🟠 Planned |
 | Setup script | Allow packages to have a setup script that runs on installation | 🟡 In Progress |
+| Improved pip support | Improve support for pip and increase speed when installing or updating | 🟣 In Testing |
 
 #### Completed
 | Feature | Description | Status | Release Type |
 |-|-|-|-|
 | Enhanced logging system | Implement a more detailed logging system to track application events and errors |🟢 Completed | Released immediately |
 | PaxD SDK | Develop a Software Development Kit (SDK) for PaxD to facilitate package development | 🟢 Completed | Released immediately |
-| Improved pip support | Improve support for pip and increase speed when installing or updating | 🟣 In Testing | Planned TBR with 1.7.0 |
 | PaxDP CLI package | Create a command-line interface (CLI) tool for PaxD to streamline package publishing and updating | 🟢 Completed | Released immediately |
 
 ### Version 1.8.0
