@@ -7,7 +7,7 @@
     "pkg_info": { // Basic information about the package, most the values are pretty self-explanatory.
         "pkg_name": "PaxD",
         "pkg_author": "mralfiem591",
-        "pkg_version": "1.6.3",
+        "pkg_version": "1.6.4",
         "pkg_description": "The main command line tool for using PaxD.",
         "pkg_license": "MIT",
         "tags": ["cli", "package manager", "installer", "windows", "tool", "gateway", "http", "repository"] // Tags to show in this packages auto-generated README.html
@@ -27,7 +27,7 @@
             "paxd:com.mralfiem591.paxd-sdk",
             "paxd:com.mralfiem591.paxd-imageview"
         ],
-        // "checksum": { // Optional checksums for files to verify integrity after download.
+        // "checksum": { // Optional SHA256 checksums for files to verify integrity after download.
         //     "paxd.py": "sha256:1e7d44c61b5e0e64e98abd86c61632b5d4f696e45e177744c0eeddae09615e01"
         // },
         "firstrun": true, // Should we make a .FIRSTRUN file to indicate this package was just installed?

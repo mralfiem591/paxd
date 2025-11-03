@@ -2366,6 +2366,19 @@ def main():
             paxd._verbose_print("Getting repository info")
             paxd.show_repo_info()
         elif args.command == "reinstall":
+            if args.package_name == "deltarunedeltarune":
+                # sneaky sneaky easter egg
+                import random
+                rand = random.randint(1, 4)
+                if rand == 1:
+                    print("Kris Get The Banana\n\nPotassium")
+                elif rand == 2:
+                    print("NOWS YOUR CHANCE TO BE A [[Big Shot]]")
+                elif rand == 3:
+                    print("WHAT GIVES PEOPLE FEELINGS OF POWER:\n\nMONEY: ██\nSTATUS: ███\nBEATING JEVIL FIRST TRY: ████████████████████")
+                elif rand == 4:
+                    print(f"{Fore.MAGENTA}██     {Fore.YELLOW}██{Style.RESET_ALL}\n\nTHE POWER OF PATTERN RECOGNITION")
+                exit(0)
             paxd._verbose_print(f"Reinstalling package: {args.package_name}")
             if args.package_name == "com.mralfiem591.paxd":
                 print(f"{Fore.RED}Cannot reinstall PaxD itself using PaxD. Please uninstall manually.")
@@ -2475,6 +2488,19 @@ def main():
             print(f"{Fore.GREEN}PaxD first time run initialization complete.")
             print(f"\n{Fore.CYAN}Welcome to PaxD!{Style.RESET_ALL}\nIt is recommended you try out PaxD with our {Fore.YELLOW}paxd-test{Style.RESET_ALL} package - install it with {Fore.GREEN}`paxd install paxd-test`{Style.RESET_ALL}, and run paxd-test to see it in action!\n\nYou can uninstall it later with {Fore.RED}`paxd uninstall paxd-test`{Style.RESET_ALL}.\n")
             
+        elif args.command == "deltarunedeltarunedeltarune":
+            # sneaky sneaky easter egg
+            import random
+            rand = random.randint(1, 4)
+            if rand == 1:
+                print("Kris Get The Banana\n\nPotassium")
+            elif rand == 2:
+                print("NOWS YOUR CHANCE TO BE A [[Big Shot]]")
+            elif rand == 3:
+                print("WHAT GIVES PEOPLE FEELINGS OF POWER:\n\nMONEY: ██\nSTATUS: ███\n BEATING JEVIL FIRST TRY: ████████████████████")
+            elif rand == 4:
+                print(f"{Fore.MAGENTA}█ {Fore.YELLOW}█{Style.RESET_ALL}\n\nTHE POWER OF PATTERN RECOGNITION")
+            
         else:
             paxd._verbose_print(f"Unknown command: {args.command}")
             print(f"{Fore.RED}Unknown command: {args.command}")
@@ -2485,7 +2511,7 @@ def main():
         print(f"\n{Fore.YELLOW}Operation cancelled by user.")
         sys.exit(1)
     # Remove "except Exception": sentry now handles it
-        
+
     # Fetch latest version of PaxD from the repository and notify if it has an update
     paxd._verbose_print("Checking for PaxD updates")
     latest_version = paxd.get_latest_version()
