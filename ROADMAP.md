@@ -30,7 +30,7 @@ Welcome to the roadmap of **PaxD**! This document outlines our vision, goals, an
 #### Uncompleted
 | Feature | Description | Status | Priority (/3) |
 |-|-|-|-|
-| PaxD-gui GUI package | Develop a graphical user interface (GUI) for PaxD to enhance user experience for non-terminal users | 🟠 Planned | P1 |
+| PaxD-gui GUI package | Develop a graphical user interface (GUI) for PaxD to enhance user experience for non-terminal users | 🔴 Now expected in 2.0.0 | P1 |
 
 #### Completed
 | Feature | Description | Status | Release Type |
