@@ -495,13 +495,14 @@ Environment Variables:
         "/home",
         "/tmp"
     ]
-    for drive in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']:
-        warning_paths.append(f"{drive}:\\")
-        warning_paths.append(os.path.join(f"{drive}:\\", "Users"))
-        warning_paths.append(os.path.join(f"{drive}:\\", "Windows"))
-        warning_paths.append(os.path.join(f"{drive}:\\", "Windows", "System32"))
-        for home_path in ['Desktop', 'Documents', 'Downloads', 'Music', 'Pictures', 'Videos']:
-            warning_paths.append(os.path.join(f"{drive}{os.path.expanduser('~')[1:]}", home_path))
+    if os.name == 'nt': # Windows-specific paths
+        for drive in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']:
+            warning_paths.append(f"{drive}:\\")
+            warning_paths.append(os.path.join(f"{drive}:\\", "Users"))
+            warning_paths.append(os.path.join(f"{drive}:\\", "Windows"))
+            warning_paths.append(os.path.join(f"{drive}:\\", "Windows", "System32"))
+            for home_path in ['Desktop', 'Documents', 'Downloads', 'Music', 'Pictures', 'Videos']:
+                warning_paths.append(os.path.join(f"{drive}{os.path.expanduser('~')[1:]}", home_path))
     
     if args.print_warning_paths:
         print("Warning paths:")
