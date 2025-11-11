@@ -2378,7 +2378,7 @@ def main():
             if args.package_name == "deltarunedeltarune":
                 # sneaky sneaky easter egg
                 import random
-                rand = random.randint(1, 4)
+                rand = random.randint(1, 5)
                 if rand == 1:
                     print("Kris Get The Banana\n\nPotassium")
                 elif rand == 2:
@@ -2387,6 +2387,8 @@ def main():
                     print("WHAT GIVES PEOPLE FEELINGS OF POWER:\n\nMONEY: ██\nSTATUS: ███\nBEATING JEVIL FIRST TRY: ████████████████████")
                 elif rand == 4:
                     print(f"{Fore.MAGENTA}██     {Fore.YELLOW}██{Style.RESET_ALL}\n\nTHE POWER OF PATTERN RECOGNITION")
+                elif rand == 5:
+                    print("* You said you were a GAMER!!!\n\n* I Only Play Mobile Games\n\nNOOOOOOOOOOOO!!!")
                 exit(0)
             paxd._verbose_print(f"Reinstalling package: {args.package_name}")
             if args.package_name == "com.mralfiem591.paxd":
