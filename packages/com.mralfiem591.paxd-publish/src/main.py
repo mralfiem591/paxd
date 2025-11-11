@@ -519,9 +519,9 @@ Environment Variables:
         sys.exit(0)
     
     for path in warning_paths:
-        if Path.cwd() == path:
+        if os.getcwd() == path:
             print("WARNING: This does not look like something you intended to publish!")
-            if input(f"Are you sure {Path.cwd()} is the path you intended? (y/N)").strip().lower() != "y":
+            if input(f"Are you sure {os.getcwd()} is the path you intended? (y/N)").strip().lower() != "y":
                 exit(1)
     
     # Create publisher and publish package
