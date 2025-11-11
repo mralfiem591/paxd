@@ -195,6 +195,5 @@ print(Fore.LIGHTGREEN_EX + "NOTE: Dependencies that PaxD requires from the PaxD 
 print(Fore.GREEN + "Success! PaxD has been installed.")
 if subprocess.run(f"start cmd /c python {os.path.join(local_app_data, 'com.mralfiem591.paxd', 'paxd.py')} init -y", shell=True).returncode == 0:
     print(Fore.GREEN + "PaxD has been installed successfully and added to Path! Enjoy using PaxD. Simply run 'paxd' in a new Command Prompt to get started.")
-    print(Fore.YELLOW + f"PaxD didn't install fully and properly, and add to Path automatically? You can try running 'python {os.path.join(local_app_data, 'com.mralfiem591.paxd', 'paxd.py')} init -y' in a Command Prompt to complete the installation.")
 else:
     print(Fore.YELLOW + f"WARNING: Could not complete install of PaxD. You can retry the installation by running 'python {os.path.join(local_app_data, 'com.mralfiem591.paxd', 'paxd.py')} init -y' in a Command Prompt.")
