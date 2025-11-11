@@ -480,6 +480,30 @@ Environment Variables:
     if not args.dir.is_dir():
         print(f"❌ Error: Path is not a directory: {args.dir}")
         sys.exit(1)
+        
+    warning_paths = [
+        os.path.expanduser("~"),
+        "/",
+        "/etc",
+        "/usr",
+        "/bin",
+        "/home",
+        "/tmp"
+    ]
+    for drive in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']:
+        warning_paths.append(f"{drive}:\\")
+        warning_paths.append(os.path.join(f"{drive}:\\", "Users"))
+        warning_paths.append(os.path.join(f"{drive}:\\", "Windows"))
+        warning_paths.append(os.path.join(f"{drive}:\\", "Windows", "System32"))
+        
+    for home_path in ['Desktop', 'Documents', 'Downloads', 'Music', 'Pictures', 'Videos']:
+        warning_paths.append(os.path.join(os.path.expanduser("~"), home_path))
+    
+    for path in warning_paths:
+        if Path.cwd() == path:
+            print("WARNING: This does not look like something you intended to publish!")
+            if input(f"Are you sure {Path.cwd()} is the path you intended? (y/N)").strip().lower() != "y":
+                exit(1)
     
     # Create publisher and publish package
     try:
