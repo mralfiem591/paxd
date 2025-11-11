@@ -116,7 +116,7 @@ print(Fore.GREEN + "0- Pre-checks...")
 
 print(Fore.GREEN + "   - Checking that paxd isnt already installed...")
 if os.path.exists(os.path.join(os.path.expandvars(r"%LOCALAPPDATA%"), "PaxD")):
-    if not os.path.exists(os.path.join(os.path.expandvars(r"%LOCALAPPDATA%"), "PaxD", "com.mralfiem591.paxd", "paxd.py")) or not os.path.exists(os.path.join(os.path.expandvars(r"%LOCALAPPDATA%"), "PaxD", "com.mralfiem591.paxd", "bin", "paxd.bat")):
+    if not os.path.exists(os.path.join(os.path.expandvars(r"%LOCALAPPDATA%"), "PaxD", "com.mralfiem591.paxd", "paxd.py")) or not os.path.exists(os.path.join(os.path.expandvars(r"%LOCALAPPDATA%"), "PaxD", "com.mralfiem591.paxd", "bin", "paxd.bat")) or not os.path.exists(os.path.join(os.path.expandvars(r"%LOCALAPPDATA%"), "PaxD", "com.mralfiem591.paxd-sdk")) or not os.path.exists(os.path.join(os.path.expandvars(r"%LOCALAPPDATA%"), "com.mralfiem591.paxd-sdk", "main.py")):
         print(Fore.YELLOW + "ERROR: PaxD is already installed, but problems were detected with the existing installation.")
         reinstall = input(Fore.YELLOW + "Would you like to continue, and attempt repair? (y/n): ").strip().lower()
         if reinstall != "y":
@@ -182,6 +182,15 @@ with open(os.path.join(local_app_data, "com.mralfiem591.paxd", ".FIRSTRUN"), "w"
 print(Fore.GREEN + "4- Installing dependencies of PaxD...")
 if os.system("pip install requests colorama rich argparse") != 0:
     print(Fore.RED + "ERROR: Failed to install dependencies via pip. Please ensure you have an active internet connection and try again.")
+    
+# install paxd-sdk
+print(Fore.GREEN + "5- Installing PaxD SDK...")
+sdk_response = requests.get(f"{repo}/packages/com.mralfiem591.paxd-sdk/src/main.py", headers={"User-Agent": "PaxdInstaller/1.0.0"}, allow_redirects=True)
+sdk_response.raise_for_status()
+sdk_data = sdk_response.text
+os.makedirs(os.path.join(local_app_data, "com.mralfiem591.paxd-sdk"), exist_ok=True)
+with open(os.path.join(local_app_data, "com.mralfiem591.paxd-sdk", "main.py"), "w", encoding="utf-8") as sdk_file:
+    sdk_file.write(sdk_data)
 
 print(Fore.LIGHTGREEN_EX + "NOTE: Dependencies that PaxD requires from the PaxD repository will be installed automatically when you first run PaxD, as they are not essential for the initialization.")
 

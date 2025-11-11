@@ -5,6 +5,7 @@ import os
 if os.name != "nt":
     print(f"PaxD is a Windows only tool.")
     print(f"Please run PaxD on a Windows device!")
+    print("(This also applies to tools and apps installed via PaxD)")
     exit(1)
 
 # Step 1: create a hook, so other packages can import paxd-sdk, and it becomes the paxd sdk package
