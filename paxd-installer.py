@@ -95,11 +95,9 @@ print(Fore.CYAN + "Welcome to the PaxD Installer!")
 print(Fore.CYAN + "This will install PaxD and set it up for first use.")
 print()
 print(Fore.YELLOW + "First, a quick question:")
-repo = input(f"{Fore.YELLOW}Which repository would you like to set up PaxD with, and install it from? {Fore.LIGHTYELLOW_EX}(Note: The repository must be PaxD-ready, meaning it contains com.mralfiem591.paxd in it's repository){Fore.YELLOW}: ").strip().lower()
+repo = input(f"{Fore.YELLOW}Which repository would you like to set up PaxD with, and install it from? {Fore.LIGHTYELLOW_EX}(Note: The repository must be PaxD-ready, meaning it contains com.mralfiem591.paxd in it's repository) (default: https://raw.githubusercontent.com/mralfiem591/paxd/refs/heads/main){Fore.YELLOW}: ").strip().lower()
 if not repo:
-    print(Fore.RED + "ERROR: No repository provided. Installation aborted.")
-    print(Fore.RED + "HELP: you can find a repository URL on the PaxD website!")
-    exit(1)
+    repo = "https://raw.githubusercontent.com/mralfiem591/paxd/refs/heads/main"
 
 repo = _resolve_repository_url(repo)
 print(f"{Fore.GREEN}Repository URL resolved to: {Fore.CYAN}{repo}{Fore.GREEN}.")
