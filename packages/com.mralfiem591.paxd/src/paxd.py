@@ -2246,6 +2246,7 @@ def main():
     if SDK_BACKUP:
         paxd._verbose_print("PaxD SDK missing - forcing install")
         paxd.install("com.mralfiem591.paxd-sdk", user_requested=False)
+        print(f"{Fore.GREEN}PaxD SDK forced installation successful, please now rerun your previous command.{Style.RESET_ALL}")
         exit(1)
     
     if os.path.exists(os.path.join(os.path.dirname(__file__), ".UPDATERUN")):
