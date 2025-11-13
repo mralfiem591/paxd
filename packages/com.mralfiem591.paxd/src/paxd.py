@@ -367,10 +367,15 @@ def add_to_path(folder_path: str) -> bool:
 
 class PaxD:
     def __init__(self, verbose=False):
+        self.paxd_version_phrase = "The SearchIndex Update"
         self.repository_file = os.path.join(os.path.dirname(__file__), "repository")
-        self.paxd_version = "1.6.8"
+        if os.path.exists(os.path.join(os.path.dirname(__file__), ".VERSION")):
+            with open(os.path.join(os.path.dirname(__file__), ".VERSION"), 'r') as vf:
+                self.paxd_version = vf.read().strip()
+        else:
+            self.paxd_version = "0.0.0"
+            self.paxd_version_phrase += " (.VERSION missing)"
         __version__ = self.paxd_version
-        self.paxd_version_phrase = "The Authentication Update"
         # Check if a PAXD_GH_TOKEN environment variable is set for authentication
         self.paxd_auth_token = os.getenv("PAXD_GH_TOKEN", None)
         if self.paxd_auth_token:
