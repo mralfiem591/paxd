@@ -2,6 +2,20 @@ __name__ = "PaxD Client"
 __author__ = "mralfiem591"
 __license__ = "Copyright 2025 mralfiem591 (MIT, refer to LICENSE file)"
 
+import sentry_sdk
+
+sentry_sdk.init(
+    dsn="https://0ad2cc445d5796110d1e4e65e3a92a38@o4510357020540928.ingest.de.sentry.io/4510357023293520",
+    # Add data like request headers and IP for users,
+    # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
+    send_default_pii=True,
+    # Enable sending logs to Sentry
+    enable_logs=True,
+    # Set traces_sample_rate to 1.0 to capture 100%
+    # of transactions for tracing.
+    traces_sample_rate=1.0,
+)
+
 import os
 
 import atexit
@@ -362,7 +376,7 @@ def add_to_path(folder_path: str) -> bool:
 class PaxD:
     def __init__(self, verbose=False):
         self.repository_file = os.path.join(os.path.dirname(__file__), "repository")
-        self.paxd_version = "1.6.6"
+        self.paxd_version = "1.6.7"
         __version__ = self.paxd_version
         self.paxd_version_phrase = "The Authentication Update"
         # Check if a PAXD_GH_TOKEN environment variable is set for authentication
@@ -375,7 +389,9 @@ class PaxD:
         self.verbose = verbose
     
     def _verbose_print(self, message, color=Fore.LIGHTBLACK_EX, mode=0):
-        """Print message only in verbose mode with timestamp. (still log incase of exception, for Sentry, to provide more context)"""
+        """Print message only in verbose mode with timestamp. (still log incase of exception, for Sentry, to provide more context)
+        
+        NOTE: mode is an old parameter, but still exists for compatability!"""
         
         if mode == 0 or mode == 1:
             # Normal mode
@@ -389,6 +405,7 @@ class PaxD:
             LOGS_VERBOSE[f"({lexicographic_number}) {timestamp}"] = message # Also include the len of LOGS_VERBOSE so logs made at the exact same time are still valid and shown, instead of just the most recent one
             if self.verbose:
                 print(f"{color}[{timestamp}] VERBOSE: {message}{Style.RESET_ALL}")
+            sentry_sdk.set_context("verbose_log", LOGS_VERBOSE)
     
     def _verbose_timing_start(self, operation):
         """Start timing an operation in verbose mode."""
