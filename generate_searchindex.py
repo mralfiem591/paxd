@@ -156,6 +156,11 @@ def generate_searchindex():
     
     if not packages:
         print("Error: No packages found!")
+        print("Creating blank search index...")
+        with open(csv_path, 'w', newline='', encoding='utf-8') as csvfile:
+            fieldnames = ['package_id', 'package_name', 'description', 'author', 'version', 'alias', 'aliases']
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
         return False
     
     fieldnames = ['package_id', 'package_name', 'description', 'author', 'version', 'alias', 'aliases']
