@@ -48,7 +48,8 @@ Welcome to the roadmap of **PaxD**! This document outlines our vision, goals, an
 #### Uncompleted
 | Feature | Description | Status | Priority (/3)
 |-|-|-|-|
-| PaxD-gui GUI package | Develop a graphical user interface (GUI) for PaxD to enhance user experience for non-terminal users | 🟠 Planned | P1 |
+| paxd-gui GUI package | Develop a graphical user interface (GUI) for PaxD to enhance user experience for non-terminal users | 🟠 Planned | P1 |
+| paxdv Virtual Enviroments | Create a system to allow for PaxD to run inside a "virtual enviroment", allowing for packages to be used in one project, not globally. | 🟠 Planned | P2 |
 
 #### Completed
 | Feature | Description | Status | Release Type |
