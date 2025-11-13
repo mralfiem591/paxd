@@ -12,6 +12,8 @@ import os
 
 import atexit
 
+PIP_PACKAGES = []
+
 # Store the current file path for use in cleanup function
 CURRENT_FILE_PATH = os.path.abspath(__file__)
 
@@ -708,8 +710,7 @@ class PaxD:
                         pip_package = dep[len("pip:"):]
                         self._verbose_print(f"Installing pip package (with uv): {pip_package}")
                         print(f"{Fore.CYAN}Installing Python package '{Fore.YELLOW}{pip_package}{Fore.CYAN}' via pip")
-                        result = os.system(f"uv pip install --system {pip_package}")
-                        self._verbose_print(f"Pip install result code: {result}")
+                        PIP_PACKAGES.append(pip_package)
                     # Dependency begins with "winget": use winget to install
                     elif dep.startswith("winget:"):
                         winget_package = dep[len("winget:"):]
@@ -746,6 +747,17 @@ class PaxD:
                 except Exception as e:
                     self._verbose_print(f"Failed to install dependency {dep}: {e}")
                     raise DependencyError(f"Failed to install dependency '{dep}': {e}")
+                
+            if PIP_PACKAGES:
+                # Install all at once
+                self._verbose_print(f"Installing all pip packages at once: {PIP_PACKAGES}")
+                print(f"{Fore.CYAN}Installing all Python packages via pip: {', '.join(PIP_PACKAGES)}")
+                pip_install_command = ['uv', 'pip', 'install', '--system'] + PIP_PACKAGES
+                result = subprocess.run(pip_install_command)
+                self._verbose_print(f"Pip install command result code: {result.returncode}")
+                if result.returncode != 0:
+                    raise DependencyError("Failed to install one or more pip packages")
+                PIP_PACKAGES.clear()  # Clear after installation
 
             # For each file in package_data[install][include], GET that file and install (supporting relative paths like folder1/file2)
             include_files = package_data.get("install", {}).get("include", [])
@@ -1134,7 +1146,7 @@ class PaxD:
                     if dep.startswith("pip:"):
                         pip_package = dep[len("pip:"):]
                         print(f"{Fore.CYAN}Installing/updating Python package '{Fore.YELLOW}{pip_package}{Fore.CYAN}' via pip (with uv)")
-                        os.system(f"uv pip install --system --upgrade {pip_package}")
+                        PIP_PACKAGES.append(pip_package)
                     # Dependency begins with "winget": use winget to install
                     elif dep.startswith("winget:"):
                         winget_package = dep[len("winget:"):]
@@ -1166,6 +1178,15 @@ class PaxD:
                         print(f"Unknown dependency type for '{dep}'")
                 except Exception as e:
                     print(f"Warning: Failed to handle dependency '{dep}': {e}")
+                    
+            if PIP_PACKAGES:
+                # Install all at once
+                print(f"{Fore.CYAN}Installing/updating all Python packages via pip: {', '.join(PIP_PACKAGES)}")
+                pip_install_command = ['uv', 'pip', 'install', '--system'] + PIP_PACKAGES
+                result = subprocess.run(pip_install_command)
+                if result.returncode != 0:
+                    raise DependencyError("Failed to install/update one or more pip packages")
+                PIP_PACKAGES.clear()  # Clear after installation/update
             
             # Check for orphaned dependencies (packages that were dependencies but are no longer needed)
             self._cleanup_orphaned_dependencies(package_name, current_dependencies)
@@ -2397,10 +2418,20 @@ def main():
                     paxd.install(paxd_package, user_requested=False)
                 elif dep.startswith("pip:"):
                     pip_package = dep[len("pip:"):]
-                    os.system(f"uv pip install --system {pip_package}")
+                    PIP_PACKAGES.append(pip_package)
                 # Add more dependency types as needed
                 else:
                     print(f"Unknown dependency type for '{dep}'")
+            
+            # Now install pip dependencies
+            if PIP_PACKAGES:
+                paxd._verbose_print(f"Installing PaxD pip dependencies: {PIP_PACKAGES}")
+                pip_install_command = [sys.executable, '-m', 'pip', 'install'] + PIP_PACKAGES
+                result = subprocess.run(pip_install_command, capture_output=True, text=True)
+                if result.returncode != 0:
+                    print(f"{Fore.RED}Pip installation failed: {result.stderr}")
+                else:
+                    print(f"{Fore.GREEN}Pip dependencies installed successfully.")
         except Exception as e:
             print(f"{Fore.RED}Failed to install PaxD dependencies: {e}")
         # 6. Delete the .FIRSTRUN file
@@ -2574,10 +2605,19 @@ def main():
                         paxd.install(paxd_package, user_requested=False)
                     elif dep.startswith("pip:"):
                         pip_package = dep[len("pip:"):]
-                        os.system(f"uv pip install --system {pip_package}")
+                        PIP_PACKAGES.append(pip_package)
                     # Add more dependency types as needed
                     else:
                         print(f"Unknown dependency type for '{dep}'")
+                        
+                if PIP_PACKAGES:
+                    paxd._verbose_print(f"Installing PaxD pip dependencies: {PIP_PACKAGES}")
+                    pip_install_command = [sys.executable, '-m', 'pip', 'install'] + PIP_PACKAGES
+                    result = subprocess.run(pip_install_command, capture_output=True, text=True)
+                    if result.returncode != 0:
+                        print(f"{Fore.RED}Pip installation failed: {result.stderr}")
+                    else:
+                        print(f"{Fore.GREEN}Pip dependencies installed successfully.")
             except Exception as e:
                 print(f"{Fore.RED}Failed to install PaxD dependencies: {e}")
             # 6. Delete the .FIRSTRUN file
