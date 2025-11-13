@@ -7,8 +7,8 @@ import sentry_sdk
 sentry_sdk.init(
     dsn="https://0ad2cc445d5796110d1e4e65e3a92a38@o4510357020540928.ingest.de.sentry.io/4510357023293520",
     send_default_pii=True,
+    enable_logs=True, # type: ignore
     traces_sample_rate=1.0,
-    attach_stacktrace=True,
 )
 
 import os
@@ -2558,16 +2558,5 @@ def main():
     # Remove "try"/"except Exception": sentry now handles it
 
 if __name__ == "__main__":
-    try:
-        main()
-    except SystemExit as e:
-        print(f"SystemExit caught! {e}")
-        sentry_sdk.capture_message(str(e))
-        sentry_sdk.flush(timeout=5)
-        sys.exit(e.code if hasattr(e, 'code') else 1)
-    except Exception as e:
-        print(f"Unhandled exception caught in main: {e}")
-        sentry_sdk.capture_exception(e)
-        sentry_sdk.flush(timeout=5)
-        sys.exit(e.code if hasattr(e, 'code') else 1)
+    main()
     bat_file_path = os.path.join(os.path.dirname(__file__), 'bin', 'paxd.bat')
