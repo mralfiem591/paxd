@@ -2,11 +2,11 @@ __name__ = "PaxD Client"
 __author__ = "mralfiem591"
 __license__ = "Copyright 2025 mralfiem591 (MIT, refer to LICENSE file)"
 
-#import sentry_sdk
+import sentry_sdk
 
-#sentry_sdk.init(
-#    dsn="https://0ad2cc445d5796110d1e4e65e3a92a38@o4510357020540928.ingest.de.sentry.io/4510357023293520",
-#)
+sentry_sdk.init(
+    dsn="https://0ad2cc445d5796110d1e4e65e3a92a38@o4510357020540928.ingest.de.sentry.io/4510357023293520",
+)
 
 import os
 
@@ -2553,6 +2553,5 @@ def main():
         print(f"{Fore.YELLOW}New PaxD version available: {Fore.RED}{paxd.paxd_version}{Fore.YELLOW} -> {Fore.GREEN}{latest_version}\n{Fore.YELLOW}Get it with '{Fore.LIGHTYELLOW_EX}paxd update paxd{Fore.YELLOW}'.")
     # Remove "try"/"except Exception": sentry now handles it
 
-if __name__ == "__main__":
-    main()
-    bat_file_path = os.path.join(os.path.dirname(__file__), 'bin', 'paxd.bat')
+main()
+bat_file_path = os.path.join(os.path.dirname(__file__), 'bin', 'paxd.bat')
