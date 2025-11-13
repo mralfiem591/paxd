@@ -706,9 +706,9 @@ class PaxD:
                     # Dependency begins with "pip:": use pip to install
                     if dep.startswith("pip:"):
                         pip_package = dep[len("pip:"):]
-                        self._verbose_print(f"Installing pip package: {pip_package}")
+                        self._verbose_print(f"Installing pip package (with uv): {pip_package}")
                         print(f"{Fore.CYAN}Installing Python package '{Fore.YELLOW}{pip_package}{Fore.CYAN}' via pip")
-                        result = os.system(f"pip install {pip_package}")
+                        result = os.system(f"uv pip install --system {pip_package}")
                         self._verbose_print(f"Pip install result code: {result}")
                     # Dependency begins with "winget": use winget to install
                     elif dep.startswith("winget:"):
@@ -1133,8 +1133,8 @@ class PaxD:
                     # Dependency begins with "pip:": use pip to install
                     if dep.startswith("pip:"):
                         pip_package = dep[len("pip:"):]
-                        print(f"{Fore.CYAN}Installing/updating Python package '{Fore.YELLOW}{pip_package}{Fore.CYAN}' via pip")
-                        os.system(f"pip install --upgrade {pip_package}")
+                        print(f"{Fore.CYAN}Installing/updating Python package '{Fore.YELLOW}{pip_package}{Fore.CYAN}' via pip (with uv)")
+                        os.system(f"uv pip install --system --upgrade {pip_package}")
                     # Dependency begins with "winget": use winget to install
                     elif dep.startswith("winget:"):
                         winget_package = dep[len("winget:"):]
@@ -2397,7 +2397,7 @@ def main():
                     paxd.install(paxd_package, user_requested=False)
                 elif dep.startswith("pip:"):
                     pip_package = dep[len("pip:"):]
-                    os.system(f"pip install {pip_package}")
+                    os.system(f"uv pip install --system {pip_package}")
                 # Add more dependency types as needed
                 else:
                     print(f"Unknown dependency type for '{dep}'")
@@ -2574,7 +2574,7 @@ def main():
                         paxd.install(paxd_package, user_requested=False)
                     elif dep.startswith("pip:"):
                         pip_package = dep[len("pip:"):]
-                        os.system(f"pip install {pip_package}")
+                        os.system(f"uv pip install --system {pip_package}")
                     # Add more dependency types as needed
                     else:
                         print(f"Unknown dependency type for '{dep}'")

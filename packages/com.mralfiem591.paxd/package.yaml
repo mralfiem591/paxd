@@ -29,6 +29,7 @@ install:
       - argparse
       - pyyaml
       - sentry-sdk
+      - uv
     paxd:
       - com.mralfiem591.paxd-sdk
       - com.mralfiem591.paxd-imageview

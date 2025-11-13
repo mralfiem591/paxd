@@ -13,7 +13,6 @@ Welcome to the roadmap of **PaxD**! This document outlines our vision, goals, an
 | Improved error handling | Enhance error messages and handling throughout the application for better user experience | 🟠 Planned | P2 |
 | paxd-vulnerability included by default | Integrate paxd-vulnerability scanner into the core PaxD package for improved security | 🟡 In Progress | P3 |
 | Setup script | Allow packages to have a setup script that runs on installation | 🟠 Planned | P2 |
-| Improved pip support | Improve support for pip and increase speed when installing or updating | 🟣 In Testing | P1 |
 
 #### Completed
 | Feature | Description | Status | Release Type |
@@ -23,6 +22,7 @@ Welcome to the roadmap of **PaxD**! This document outlines our vision, goals, an
 | PaxDP CLI package | Create a command-line interface (CLI) tool for PaxD to streamline package publishing and updating | 🟢 Completed | Released immediately |
 | Manifest supports-fastxd flag | Allow packages to specify a `supports-fastxd` flag in their manifest to indicate compatibility with FastxD | 🟢 Completed | Released immediately |
 | Improved search indexing | Optimize the search indexing process for faster and more accurate results | 🟢 Completed | Released immediately |
+| Replace pip with uv for package dependencies | Switch from using pip to uv for managing Python package dependencies, due to its major speed increase | 🟢 Completed | Released immediately |
 
 ### Version 1.8.0
 
