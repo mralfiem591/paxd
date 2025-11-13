@@ -47,5 +47,5 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add searchindex.csv
-          git commit -m "chore: recreate SearchIndex to keep up to date"
+          git commit -m "Chore: Rebuild SearchIndex due to updates"
           git push
