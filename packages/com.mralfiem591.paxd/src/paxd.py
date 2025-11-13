@@ -2030,7 +2030,7 @@ class PaxD:
         
         print(f"\n{Fore.BLUE}--- Update Summary ---")
         print(f"{Fore.GREEN}Updated: {Fore.WHITE}{updated_count}{Fore.GREEN} packages")
-        if failed_count > 0:
+        if failed_count >= 1:
             print(f"{Fore.RED}Failed: {Fore.WHITE}{failed_count}{Fore.RED} packages")
         print(f"{Fore.GREEN}All package updates completed.")
         
