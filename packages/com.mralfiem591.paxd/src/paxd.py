@@ -2562,7 +2562,7 @@ if __name__ == "__main__":
         main()
     except SystemExit as e:
         print(f"SystemExit caught! {e}")
-        sentry_sdk.capture_exception(e)
+        sentry_sdk.capture_message(str(e))
         sentry_sdk.flush(timeout=5)
         sys.exit(e.code if hasattr(e, 'code') else 1)
     except Exception as e:
