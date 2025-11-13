@@ -178,7 +178,7 @@ with open(os.path.join(local_app_data, "com.mralfiem591.paxd", ".FIRSTRUN"), "w"
     firstrun_file.write("This file indicates that the package has been run for the first time.")
     
 print(Fore.GREEN + "4- Installing dependencies of PaxD...")
-if os.system("pip install requests colorama rich argparse") != 0:
+if os.system("pip install requests colorama rich argparse sentry-sdk") != 0:
     print(Fore.RED + "ERROR: Failed to install dependencies via pip. Please ensure you have an active internet connection and try again.")
     
 # install paxd-sdk
@@ -195,5 +195,6 @@ print(Fore.LIGHTGREEN_EX + "NOTE: Dependencies that PaxD requires from the PaxD 
 print(Fore.GREEN + "Success! PaxD has been installed.")
 if subprocess.run(f"start cmd /c python {os.path.join(local_app_data, 'com.mralfiem591.paxd', 'paxd.py')} init -y", shell=True).returncode == 0:
     print(Fore.GREEN + "PaxD has been installed successfully and added to Path! Enjoy using PaxD. Simply run 'paxd' in a new Command Prompt to get started.")
+    print(Fore.YELLOW + f"HINT: If 'paxd' is not recognized, please restart your Command Prompt or computer to refresh environment variables. If it still isnt working, try '{os.path.join(local_app_data, 'com.mralfiem591.paxd', 'paxd.py')} init -y' directly.")
 else:
     print(Fore.YELLOW + f"WARNING: Could not complete install of PaxD. You can retry the installation by running 'python {os.path.join(local_app_data, 'com.mralfiem591.paxd', 'paxd.py')} init -y' in a Command Prompt.")
