@@ -1616,88 +1616,171 @@ class PaxD:
             repo_url = self._read_repository_url()
             repo_url = self._resolve_repository_url(repo_url)
             
-            # Get resolution data for aliases
-            resolution_url = f"{repo_url}/resolution"
-            self._verbose_print(f"Fetching resolution data from: {resolution_url}")
-            resolution_response = requests.get(resolution_url, headers=self.headers, allow_redirects=True)  # type: ignore
-            self._verbose_print(f"GET {resolution_url}: {resolution_response.status_code}")
-            self._verbose_print(f"Resolution response status: {resolution_response.status_code}")
-            resolution_response.raise_for_status()
-            resolution_data = parse_jsonc(resolution_response.text)
-            self._verbose_print(f"Found {len(resolution_data)} packages in resolution data")
-            
             print(f"{Fore.CYAN}Searching for '{Fore.YELLOW}{search_term}{Fore.CYAN}'...")
             print(f"{Fore.BLUE}{'=' * 60}")
             
             found_packages = []
             search_term_lower = search_term.lower()
             
-            # Search through all packages in resolution (this gives us all available packages)
-            for package_name, aliases in resolution_data.items():
-                try:
-                    # Get package metadata (try both paxd and paxd.yaml)
-                    package_data, source_file = self._fetch_package_metadata(repo_url, package_name)
-                    self._verbose_print(f"Successfully fetched metadata from {source_file} for search")
-                    pkg_info = package_data.get('pkg_info', {})
-                    install_info = package_data.get('install', {})
+            # Try to use searchindex.csv for faster searching
+            searchindex_url = f"{repo_url}/searchindex.csv"
+            self._verbose_print(f"Attempting to fetch search index from: {searchindex_url}")
+            
+            try:
+                searchindex_response = requests.get(searchindex_url, headers=self.headers, allow_redirects=True)  # type: ignore
+                self._verbose_print(f"GET {searchindex_url}: {searchindex_response.status_code}")
+                
+                if searchindex_response.status_code == 200:
+                    self._verbose_print("Search index found, using optimized search")
+                    # Parse CSV data
+                    import csv
+                    from io import StringIO
                     
-                    # Extract searchable fields
-                    display_name = pkg_info.get('pkg_name', 'Unknown')
-                    description = pkg_info.get('pkg_description', 'No description')
-                    author = pkg_info.get('pkg_author', 'Unknown')
-                    version = pkg_info.get('pkg_version', 'Unknown')
-                    alias = install_info.get('alias', '')
+                    csv_data = StringIO(searchindex_response.text)
+                    csv_reader = csv.DictReader(csv_data)
                     
-                    # Check if search term matches
-                    matches = []
-                    matched_aliases = set()  # Track aliases to avoid duplicates
-                    
-                    # Check package name (exact and partial)
-                    if search_term_lower in package_name.lower():
-                        matches.append(f"package name: {package_name}")
-                    
-                    # Check display name
-                    if search_term_lower in display_name.lower():
-                        matches.append(f"display name: {display_name}")
-                    
-                    # Check all aliases (both from package info and resolution) but avoid duplicates
-                    all_aliases = set()
-                    if alias:
-                        all_aliases.add(alias)
-                    all_aliases.update(aliases)
-                    
-                    for alias_name in all_aliases:
-                        if search_term_lower in alias_name.lower():
-                            matched_aliases.add(alias_name)
-                    
-                    # Add matched aliases to results
-                    for matched_alias in sorted(matched_aliases):
-                        matches.append(f"alias: {matched_alias}")
-                    
-                    # Check description
-                    if search_term_lower in description.lower():
-                        matches.append("description")
-                    
-                    # Check author
-                    if search_term_lower in author.lower():
-                        matches.append(f"author: {author}")
-                    
-                    if matches:
-                        found_packages.append({
-                            'package_name': package_name,
-                            'display_name': display_name,
-                            'description': description,
-                            'author': author,
-                            'version': version,
-                            'alias': alias,
-                            'aliases': aliases,
-                            'matches': matches,
-                            'is_installed': self.is_installed(package_name)
-                        })
+                    # Search through the index
+                    for row in csv_reader:
+                        package_name = row.get('package_id', '')
+                        display_name = row.get('package_name', 'Unknown')
+                        description = row.get('description', 'No description')
+                        author = row.get('author', 'Unknown')
+                        version = row.get('version', 'Unknown')
+                        alias = row.get('alias', '')
+                        # Aliases are stored as pipe-separated values
+                        aliases_str = row.get('aliases', '')
+                        aliases = [a.strip() for a in aliases_str.split('|') if a.strip()] if aliases_str else []
                         
-                except Exception as e:
-                    # Skip packages that can't be processed
-                    continue
+                        # Check if search term matches
+                        matches = []
+                        matched_aliases = set()
+                        
+                        # Check package name (exact and partial)
+                        if search_term_lower in package_name.lower():
+                            matches.append(f"package name: {package_name}")
+                        
+                        # Check display name
+                        if search_term_lower in display_name.lower():
+                            matches.append(f"display name: {display_name}")
+                        
+                        # Check all aliases
+                        all_aliases = set()
+                        if alias:
+                            all_aliases.add(alias)
+                        all_aliases.update(aliases)
+                        
+                        for alias_name in all_aliases:
+                            if search_term_lower in alias_name.lower():
+                                matched_aliases.add(alias_name)
+                        
+                        # Add matched aliases to results
+                        for matched_alias in sorted(matched_aliases):
+                            matches.append(f"alias: {matched_alias}")
+                        
+                        # Check description
+                        if search_term_lower in description.lower():
+                            matches.append("description")
+                        
+                        # Check author
+                        if search_term_lower in author.lower():
+                            matches.append(f"author: {author}")
+                        
+                        if matches:
+                            found_packages.append({
+                                'package_name': package_name,
+                                'display_name': display_name,
+                                'description': description,
+                                'author': author,
+                                'version': version,
+                                'alias': alias,
+                                'aliases': aliases,
+                                'matches': matches,
+                                'is_installed': self.is_installed(package_name)
+                            })
+                else:
+                    raise requests.HTTPError("Search index not found")
+                    
+            except (requests.HTTPError, requests.RequestException, KeyError) as index_error:
+                # Fallback to old search method if searchindex.csv is not available
+                self._verbose_print(f"Search index not available ({index_error}), falling back to legacy search")
+                print(f"{Fore.YELLOW}Note: Using legacy search (slower). Repository maintainer should add searchindex.csv for better performance.")
+                
+                # Get resolution data for aliases
+                resolution_url = f"{repo_url}/resolution"
+                self._verbose_print(f"Fetching resolution data from: {resolution_url}")
+                resolution_response = requests.get(resolution_url, headers=self.headers, allow_redirects=True)  # type: ignore
+                self._verbose_print(f"GET {resolution_url}: {resolution_response.status_code}")
+                self._verbose_print(f"Resolution response status: {resolution_response.status_code}")
+                resolution_response.raise_for_status()
+                resolution_data = parse_jsonc(resolution_response.text)
+                self._verbose_print(f"Found {len(resolution_data)} packages in resolution data")
+                
+                # Search through all packages in resolution (this gives us all available packages)
+                for package_name, aliases in resolution_data.items():
+                    try:
+                        # Get package metadata (try both paxd and paxd.yaml)
+                        package_data, source_file = self._fetch_package_metadata(repo_url, package_name)
+                        self._verbose_print(f"Successfully fetched metadata from {source_file} for search")
+                        pkg_info = package_data.get('pkg_info', {})
+                        install_info = package_data.get('install', {})
+                        
+                        # Extract searchable fields
+                        display_name = pkg_info.get('pkg_name', 'Unknown')
+                        description = pkg_info.get('pkg_description', 'No description')
+                        author = pkg_info.get('pkg_author', 'Unknown')
+                        version = pkg_info.get('pkg_version', 'Unknown')
+                        alias = install_info.get('alias', '')
+                        
+                        # Check if search term matches
+                        matches = []
+                        matched_aliases = set()  # Track aliases to avoid duplicates
+                        
+                        # Check package name (exact and partial)
+                        if search_term_lower in package_name.lower():
+                            matches.append(f"package name: {package_name}")
+                        
+                        # Check display name
+                        if search_term_lower in display_name.lower():
+                            matches.append(f"display name: {display_name}")
+                        
+                        # Check all aliases (both from package info and resolution) but avoid duplicates
+                        all_aliases = set()
+                        if alias:
+                            all_aliases.add(alias)
+                        all_aliases.update(aliases)
+                        
+                        for alias_name in all_aliases:
+                            if search_term_lower in alias_name.lower():
+                                matched_aliases.add(alias_name)
+                        
+                        # Add matched aliases to results
+                        for matched_alias in sorted(matched_aliases):
+                            matches.append(f"alias: {matched_alias}")
+                        
+                        # Check description
+                        if search_term_lower in description.lower():
+                            matches.append("description")
+                        
+                        # Check author
+                        if search_term_lower in author.lower():
+                            matches.append(f"author: {author}")
+                        
+                        if matches:
+                            found_packages.append({
+                                'package_name': package_name,
+                                'display_name': display_name,
+                                'description': description,
+                                'author': author,
+                                'version': version,
+                                'alias': alias,
+                                'aliases': aliases,
+                                'matches': matches,
+                                'is_installed': self.is_installed(package_name)
+                            })
+                            
+                    except Exception as e:
+                        # Skip packages that can't be processed
+                        continue
             
             # Display results
             if not found_packages:

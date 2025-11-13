@@ -14,3 +14,4 @@ vulnerability_issue_creator.py
 # WE HAVE PYCACHE IN THE GITIGNORE WHY IS IT STILL BEING PUSHED LOL
 __pycache__/
 *.pyc
+generate_searchindex.py
