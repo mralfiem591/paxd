@@ -37,7 +37,17 @@ mode = input(Fore.YELLOW + "CHOOSE A MODE:\n\n1. Lite: Just the required files. 
 
 import requests
 
-if mode.strip() != '2':
+if mode.strip() == '1':
+    required = [
+        'generate_searchindex.py',
+        'paxd',
+        'fastxd.py'
+    ]
+elif mode.strip() == '3':
+    required = [
+        'paxd'
+    ]
+else:
     required = [
         'SECURITY.md',
         'LICENSE',
@@ -49,16 +59,6 @@ if mode.strip() != '2':
         'fastxd.py',
         'repoasset/certified.png',
         'repoasset/logo.png'
-    ]
-elif mode.strip() == '3':
-    required = [
-        'paxd'
-    ]
-else:
-    required = [
-        'generate_searchindex.py',
-        'paxd',
-        'fastxd.py'
     ]
 
 for entry in required:
@@ -78,7 +78,7 @@ for entry in required:
 
 # Create vulnerabilities and resolution with blank json dicts
 if mode.strip() != '3':
-    if mode.strip() != '2':
+    if mode.strip() == '2':
         with open(os.path.join(directory, 'vulnerabilities'), 'w', encoding='utf-8') as f:
             f.write("{}")
         print(Fore.GREEN + "Created blank 'vulnerabilities' file.")
@@ -93,7 +93,7 @@ if mode.strip() != '3':
     print(Fore.GREEN + "Created blank 'certified' file.")
         
     # Generate initial searchindex.csv
-    if mode.strip() != '2':
+    if mode.strip() == '2':
         print(Fore.CYAN + "Generating initial searchindex.csv...")
         with open(os.path.join(directory, 'generate_searchindex.py'), 'r', encoding='utf-8') as f:
             exec(f.read())
