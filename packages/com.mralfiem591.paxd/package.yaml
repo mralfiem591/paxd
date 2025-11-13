@@ -28,6 +28,7 @@ install:
       - colorama
       - argparse
       - pyyaml
+      - sentry-sdk
     paxd:
       - com.mralfiem591.paxd-sdk
       - com.mralfiem591.paxd-imageview
