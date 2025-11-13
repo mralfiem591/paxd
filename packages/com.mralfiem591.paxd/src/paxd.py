@@ -2032,7 +2032,9 @@ class PaxD:
         print(f"{Fore.GREEN}Updated: {Fore.WHITE}{updated_count}{Fore.GREEN} packages")
         if failed_count >= 1:
             print(f"{Fore.RED}Failed: {Fore.WHITE}{failed_count}{Fore.RED} packages")
-        print(f"{Fore.GREEN}All package updates completed.")
+            print(f"{Fore.YELLOW}Some packages failed installation!")
+        else:
+            print(f"{Fore.GREEN}All package updates completed.")
         
     def export(self):
         """Export a list of all packages, to an export.paxd file."""
