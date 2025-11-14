@@ -1,11 +1,20 @@
 Status update on PaxD Main Repository
 
-Our SearchIndex is currently experiencing problems, and is out of date.
-We have temporarily started using the old PaxD method for searching.
+UPDATE 1:
 
-Please do not search during this time ("paxd search"), as it will take a while to complete.
+  Our SearchIndex is currently experiencing problems, and is out of date.
+  We have temporarily started using the old PaxD method for searching.
+  
+  Please do not search during this time ("paxd search"), as it will take a while to complete.
+  
+  Thanks for your patience while we work to resolve this issue.
 
-Thanks for your patience while we work to resolve this issue.
+UPDATE 2:
+
+  Following the previous issue, you may experience degraded preformance in installing packages.
+  This is caused by the search index errors mentioned previously.
+
+  Thanks for your patience while we work to resolve this issue.
 
 - mralfiem591
   Maintainer of PaxD
