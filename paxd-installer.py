@@ -184,8 +184,8 @@ with open(os.path.join(local_app_data, "com.mralfiem591.paxd-sdk", "main.py"), "
 print(Fore.LIGHTGREEN_EX + "NOTE: Dependencies that PaxD requires from the PaxD repository will be installed automatically when you first run PaxD, as they are not essential for the initialization.")
 
 print(Fore.GREEN + "Success! PaxD has been installed.")
-if subprocess.run(f"start cmd /c python {os.path.join(local_app_data, 'com.mralfiem591.paxd', 'paxd.py')} init -y", shell=True).returncode == 0:
+if subprocess.run(f"start cmd /c uv run {os.path.join(local_app_data, 'com.mralfiem591.paxd', 'paxd.py')} init -y", shell=True).returncode == 0:
     print(Fore.GREEN + "PaxD has been installed successfully and added to Path! Enjoy using PaxD. Simply run 'paxd' in a new Command Prompt to get started.")
-    print(Fore.YELLOW + f"HINT: If 'paxd' is not recognized, please restart your Command Prompt or computer to refresh environment variables. If it still isnt working, try '{os.path.join(local_app_data, 'com.mralfiem591.paxd', 'paxd.py')} init -y' directly.")
+    print(Fore.YELLOW + f"HINT: If 'paxd' is not recognized, please restart your Command Prompt or computer to refresh environment variables. If it still isnt working, try 'uv run {os.path.join(local_app_data, 'com.mralfiem591.paxd', 'paxd.py')} init -y' directly.")
 else:
     print(Fore.YELLOW + f"WARNING: Could not complete install of PaxD. You can retry the installation by running 'python {os.path.join(local_app_data, 'com.mralfiem591.paxd', 'paxd.py')} init -y' in a Command Prompt.")
