@@ -43,7 +43,7 @@ def cleanup():
         os.makedirs(os.path.dirname(bat_file_path), exist_ok=True)
         with open(bat_file_path, 'w') as f:
             f.write("@echo off\n")
-            f.write(f"uv run {CURRENT_FILE_PATH} %*\n")
+            f.write(f"uv run --system-site-packages {CURRENT_FILE_PATH} %*\n")
 
 atexit.register(cleanup)
 
@@ -845,7 +845,7 @@ class PaxD:
                     self._verbose_print("Creating new batch file")
                     with open(bat_file_path, 'w') as f:
                         f.write(f"@echo off\n")
-                        f.write(f"uv run {os.path.join(local_app_data, 'com.mralfiem591.paxd', 'run_pkg.py')} {os.path.join(local_app_data, package_name, mainfile)} %*\n")
+                        f.write(f"uv run --system-site-packages {os.path.join(local_app_data, 'com.mralfiem591.paxd', 'run_pkg.py')} {os.path.join(local_app_data, package_name, mainfile)} %*\n")
                     print(f"Created batch file at {bat_file_path}")
                 else:
                     self._verbose_print("Batch file already exists, skipping creation")
@@ -1298,7 +1298,7 @@ class PaxD:
                 # Update the batch file content
                 with open(bat_file_path, 'w') as f:
                     f.write(f"@echo off\n")
-                    f.write(f"uv run {os.path.join(local_app_data, 'com.mralfiem591.paxd', 'run_pkg.py')} {os.path.join(local_app_data, package_name, mainfile)} %*\n")
+                    f.write(f"uv run --system-site-packages {os.path.join(local_app_data, 'com.mralfiem591.paxd', 'run_pkg.py')} {os.path.join(local_app_data, package_name, mainfile)} %*\n")
                 print(f"Updated batch file at {bat_file_path}")
             
             print(f"{Fore.GREEN}✓ Successfully updated '{pkg_name_friendly}' to version {Fore.CYAN}{latest_version}{Style.RESET_ALL}")
@@ -2384,7 +2384,7 @@ def main():
         if not os.path.exists(paxd_bin_path):
             with open(paxd_bin_path, 'w') as f:
                 f.write(f"@echo off\n")
-                f.write(f"uv run {os.path.abspath(__file__)} %*\n")
+                f.write(f"uv run --system-site-packages {os.path.abspath(__file__)} %*\n")
             print(f"Created paxd.bat at {paxd_bin_path}")
         
         # 4. Register PaxD itself as user-installed and version PaxD
@@ -2579,7 +2579,7 @@ def main():
             if not os.path.exists(paxd_bin_path):
                 with open(paxd_bin_path, 'w') as f:
                     f.write(f"@echo off\n")
-                    f.write(f"uv run {os.path.abspath(__file__)} %*\n")
+                    f.write(f"uv run --system-site-packages {os.path.abspath(__file__)} %*\n")
                 print(f"Created paxd.bat at {paxd_bin_path}")
             
             # 4. Register PaxD itself as user-installed and version PaxD
