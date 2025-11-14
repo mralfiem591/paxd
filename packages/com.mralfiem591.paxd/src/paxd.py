@@ -2359,7 +2359,7 @@ def main():
         if status:
             print(f"{Fore.YELLOW}Status Update on current repository:")
             print()
-            print(f"{Fore.RED}{status.text}")
+            print(f"{Fore.RED}{str(status.text).replace('lu', f'{Fore.YELLOW}Last updated:')}")
     except Exception as e:
         paxd._verbose_print(f"Error fetching status! {e}")
     
