@@ -191,4 +191,4 @@ if subprocess.run(f'start cmd /c "{sys.executable}" "{os.path.join(local_app_dat
     print(Fore.GREEN + "PaxD has been installed successfully and added to Path! Enjoy using PaxD. Simply run 'paxd' in a new Command Prompt to get started.")
     print(Fore.YELLOW + f'HINT: If \'paxd\' is not recognized, please restart your Command Prompt or computer to refresh environment variables. If it still isnt working, try \'"{sys.executable}" "{os.path.join(local_app_data, "com.mralfiem591.paxd", "paxd.py")}" init -y\' directly.')
 else:
-    print(Fore.YELLOW + f'WARNING: Could not complete install of PaxD. You can retry the installation by running \'"{sys.executable}" "{os.path.join(local_app_data, "com.mralfiem591.paxd", "paxd.py")}" init -y\' in a Command Prompt.')
+    print(Fore.YELLOW + f'WARNING: Could not fully complete installation of PaxD. You can retry the installation by running \'"{sys.executable}" "{os.path.join(local_app_data, "com.mralfiem591.paxd", "paxd.py")}" init -y\' in a Command Prompt.')
