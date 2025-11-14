@@ -59,7 +59,6 @@ from colorama import init, Fore, Style  # type: ignore (colorama is in paxd file
 import yaml # type: ignore (yaml is in paxd file dependencies)
 import re
 
-# Windows-specific imports with error handling
 try:
     import ctypes
     import winreg
