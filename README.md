@@ -11,7 +11,7 @@
 > [!WARNING]
 > **Some manual updating may be required after updating to 1.7.0, due to major changes in package management. Please read the release notes when they are published.**
 
-> [!IMPORTANT]
+> [!CAUTION]
 > **Older versions of PaxD may not be compatible with this repository after the 1.7.0 update. The most affected versions are 1.5.1 and below. Please update PaxD to the latest version to ensure compatibility.**
 
 The official default repository for PaxD packages, and home to the official PaxD package.
