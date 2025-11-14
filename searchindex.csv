@@ -6,3 +6,4 @@ com.mralfiem591.paxd-publish,PaxD Publish,A tool to validate and publish PaxD pa
 com.mralfiem591.paxd-sdk,PaxD SDK,The main SDK (Software Development Kit) for PaxD.,mralfiem591,1.2.2,,paxd-sdk
 com.mralfiem591.test,Test Package,A test package to ensure PaxD works correctly.,mralfiem591,1.0.0,paxd-test,paxd-test|paxd-example
 com.mralfiem591.vulnerability,PaxD Vulnerability Scanner,A simple vulnerability scanner for PaxD.,mralfiem591,1.0.1,paxd-vulnscan,paxd-vulnscan
+paxd-development.meta,Metapackage: paxd-development,"Collection of 3 packages: com.mralfiem591.paxd-compiler, com.mralfiem591.paxd-sdk, com.mralfiem591.paxd-publish",Repository Maintainer,metapackage,,
