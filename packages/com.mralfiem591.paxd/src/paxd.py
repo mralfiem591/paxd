@@ -2446,7 +2446,8 @@ def main():
         except Exception as e:
             print(f"{Fore.RED}Failed to install PaxD dependencies: {e}")
         # 6. Delete the .FIRSTRUN file
-        os.remove(os.path.join(os.path.dirname(__file__), ".FIRSTRUN"))
+        if os.path.exists(os.path.join(os.path.dirname(__file__), ".FIRSTRUN")):
+            os.remove(os.path.join(os.path.dirname(__file__), ".FIRSTRUN"))
         print(f"{Fore.GREEN}PaxD first time run initialization complete.")
         print(f"\n{Fore.CYAN}Welcome to PaxD!{Style.RESET_ALL}\nIt is recommended you try out PaxD with our {Fore.YELLOW}paxd-test{Style.RESET_ALL} package - install it with {Fore.GREEN}`paxd install paxd-test`{Style.RESET_ALL}, and run paxd-test to see it in action!\n\nYou can uninstall it later with {Fore.RED}`paxd uninstall paxd-test`{Style.RESET_ALL}.\n")
         
@@ -2640,7 +2641,9 @@ def main():
             except Exception as e:
                 print(f"{Fore.RED}Failed to install PaxD dependencies: {e}")
             # 6. Delete the .FIRSTRUN file
-            os.remove(os.path.join(os.path.dirname(__file__), ".FIRSTRUN"))
+            firstrun_file = os.path.join(os.path.dirname(__file__), ".FIRSTRUN")
+            if os.path.exists(firstrun_file):
+                os.remove(firstrun_file)
             print(f"{Fore.GREEN}PaxD first time run initialization complete.")
             print(f"\n{Fore.CYAN}Welcome to PaxD!{Style.RESET_ALL}\nIt is recommended you try out PaxD with our {Fore.YELLOW}paxd-test{Style.RESET_ALL} package - install it with {Fore.GREEN}`paxd install paxd-test`{Style.RESET_ALL}, and run paxd-test to see it in action!\n\nYou can uninstall it later with {Fore.RED}`paxd uninstall paxd-test`{Style.RESET_ALL}.\n")
             
