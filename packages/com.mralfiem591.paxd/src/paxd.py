@@ -684,15 +684,25 @@ class PaxD:
                 # Install each package in the metapackage
                 installed_packages = []
                 failed_packages = []
+                already_installed_packages = []  # Track packages that already existed
                 
                 for pkg in package_list:
                     try:
                         print(f"{Fore.BLUE}Installing package {Fore.YELLOW}{pkg}{Fore.BLUE} from metapackage...")
+                        
+                        # Check if package already exists before installing
+                        pkg_path = os.path.join(local_app_data, pkg)
+                        already_existed = os.path.exists(pkg_path)
+                        
                         # For metapackages, we install each package as a dependency (user_requested=False)
                         # This ensures that existing dependencies are not converted to user-installed
                         # and that new packages are installed as dependencies, not user packages
                         self.install(pkg, user_requested=False, skip_checksum=skip_checksum)
-                        installed_packages.append(pkg)
+                        
+                        if already_existed:
+                            already_installed_packages.append(pkg)
+                        else:
+                            installed_packages.append(pkg)
                     except Exception as e:
                         self._verbose_print(f"Failed to install package {pkg} from metapackage: {e}")
                         print(f"{Fore.RED}Failed to install {Fore.YELLOW}{pkg}{Fore.RED}: {e}")
@@ -700,6 +710,7 @@ class PaxD:
                 
                 # If the metapackage was user-requested, we need to track which packages
                 # were installed as part of this metapackage for proper uninstall behavior
+                # Only track packages that were actually installed (not already existing)
                 if user_requested and installed_packages:
                     # Create a tracking file for the metapackage installation
                     metapackage_tracking_dir = os.path.join(local_app_data, ".metapackages")
@@ -710,16 +721,25 @@ class PaxD:
                     tracking_file = os.path.join(metapackage_tracking_dir, f"{tracking_name}.installed")
                     
                     with open(tracking_file, 'w') as f:
-                        for pkg in installed_packages:
+                        for pkg in installed_packages:  # Only newly installed packages
                             f.write(f"{pkg}\n")
                     self._verbose_print(f"Created metapackage tracking file: {tracking_file}")
+                    
+                    if already_installed_packages:
+                        print(f"{Fore.CYAN}Note: {len(already_installed_packages)} packages were already installed and won't be tracked for uninstall:")
+                        for pkg in already_installed_packages:
+                            print(f"  - {Fore.YELLOW}{pkg}{Fore.CYAN} (already existed)")
                 
                 self._verbose_timing_end(f"install {package_name}")
                 
                 # Report results
-                if installed_packages:
-                    print(f"\n{Fore.GREEN}✓ Metapackage {Fore.YELLOW}{package_name}{Fore.GREEN} installed successfully!")
-                    print(f"{Fore.GREEN}Successfully installed: {Fore.CYAN}{', '.join(installed_packages)}")
+                total_packages = installed_packages + already_installed_packages
+                if total_packages:
+                    print(f"\n{Fore.GREEN}✓ Metapackage {Fore.YELLOW}{package_name}{Fore.GREEN} processed successfully!")
+                    if installed_packages:
+                        print(f"{Fore.GREEN}Newly installed: {Fore.CYAN}{', '.join(installed_packages)}")
+                    if already_installed_packages:
+                        print(f"{Fore.BLUE}Already installed: {Fore.CYAN}{', '.join(already_installed_packages)}")
                 
                 if failed_packages:
                     print(f"{Fore.RED}Failed to install: {Fore.YELLOW}{', '.join(failed_packages)}")
