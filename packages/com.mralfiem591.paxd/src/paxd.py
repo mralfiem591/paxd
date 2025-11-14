@@ -128,6 +128,7 @@ try:
             
     paxd_sdk.Messaging.ClearMessages("com.mralfiem591.paxd")
 except Exception:
+    print("Warning: Could not load PaxD SDK. Some functionality may be limited.")
     pass
 
 lexicographic_max_default = 10000
