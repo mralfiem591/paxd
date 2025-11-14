@@ -2352,7 +2352,8 @@ def main():
 
     # Check for status messages
     try:
-        status = requests.get(f"{repo_optimised}/status", headers=paxd.headers, allow_redirects=True)
+        repo = paxd._resolve_repository_url(paxd._read_repository_url())
+        status = requests.get(f"{repo}/status", headers=paxd.headers, allow_redirects=True)
         status.raise_for_status()
 
         if status:
