@@ -10,7 +10,6 @@ Welcome to the roadmap of **PaxD**! This document outlines our vision, goals, an
 | Feature | Description | Status | Priority (/3) |
 |-|-|-|-|
 | Pulls from external sources | Enable packages to store their package src/ folder in another location, instead of the GitHub repository | 🔴 **Delayed until further notice** | P2 |
-| Improved error handling | Enhance error messages and handling throughout the application for better user experience | 🟠 Planned | P2 |
 | paxd-vulnerability included by default | Integrate paxd-vulnerability scanner into the core PaxD package for improved security | 🟡 In Progress | P3 |
 | Setup script | Allow packages to have a setup script that runs on installation | 🟠 Planned | P2 |
 
@@ -23,6 +22,7 @@ Welcome to the roadmap of **PaxD**! This document outlines our vision, goals, an
 | Manifest supports-fastxd flag | Allow packages to specify a `supports-fastxd` flag in their manifest to indicate compatibility with FastxD | 🟢 Completed | Released immediately |
 | Improved search indexing | Optimize the search indexing process for faster and more accurate results | 🟢 Completed | Released immediately |
 | Replace pip with uv for package dependencies | Switch from using pip to uv for managing Python package dependencies, due to its major speed increase | 🟢 Completed | Released immediately |
+| Improved error handling | Enhance error messages and handling throughout the application for better user experience | 🟢 Completed | Released immediately |
 
 ### Version 1.8.0
 
