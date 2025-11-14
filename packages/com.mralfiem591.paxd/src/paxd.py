@@ -593,7 +593,7 @@ class PaxD:
         else:
             base_name = metapackage_name
             
-        meta_url = f"{repo_url}/packages/{base_name}.meta"
+        meta_url = f"{repo_url}/packages/metapackages/{base_name}.meta"
         self._verbose_print(f"Trying metapackage file at: {meta_url}")
         
         try:
