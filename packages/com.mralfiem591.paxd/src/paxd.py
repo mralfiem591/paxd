@@ -21,7 +21,7 @@ SDK_BACKUP = False
 
 def cleanup():
     # Check if the bat file exists and contains run_pkg.py (which is a bug)
-    bat_file_path = os.path.join(os.path.expandvars(r"%LOCALAPPDATA%"), "PaxD", "bin", "paxd.bat")
+    bat_file_path = os.path.join(os.path.expandvars(r"%LOCALAPPDATA%"), "PaxD", "com.mralfiem591.paxd", "bin", "paxd.bat")
     needs_rewrite = False
     if os.path.exists(bat_file_path):
         try:
