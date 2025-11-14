@@ -146,6 +146,10 @@ print()
 if input(Fore.GREEN + f"Your system is ready for installation/repair! Proceed? (y/n): ").strip().lower() != "y":
     print(Fore.RED + "Installation/repair aborted by user.")
     exit(1)
+    
+if os.path.exists(os.path.join(os.path.expandvars(r"%LOCALAPPDATA%"), "PaxD")):
+    import shutil
+    shutil.rmtree(os.path.join(os.path.expandvars(r"%LOCALAPPDATA%"), "PaxD"))
 
 print(Fore.GREEN + "1- Writing repository file...")
 local_app_data = os.path.join(os.path.expandvars(r"%LOCALAPPDATA%"), "PaxD")
