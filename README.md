@@ -5,6 +5,15 @@
 ![PaxD Logo](repoasset/logo.png)
 ![PaxD Ready Badge](repoasset/paxdready.png)
 
+> [!TIP]
+> **We are approaching the release of PaxD version 1.7.0!** Check out the [ROADMAP.md](ROADMAP.md) for more details on upcoming features and improvements.
+
+> [!WARNING]
+> **Some manual updating may be required after updating to 1.7.0, due to major changes in package management. Please read the release notes when they are published.**
+
+> [!IMPORTANT]
+> **Older versions of PaxD may not be compatible with this repository after the 1.7.0 update. The most affected versions are 1.5.1 and below. Please update PaxD to the latest version to ensure compatibility.**
+
 The official default repository for PaxD packages, and home to the official PaxD package.
 
 **Install (or repair) PaxD!**: `curl -L -o %TEMP%\paxd_installer.py https://raw.githubusercontent.com/mralfiem591/paxd/refs/heads/main/paxd-installer.py && python %TEMP%\paxd_installer.py`

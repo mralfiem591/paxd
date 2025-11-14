@@ -23,6 +23,7 @@ Welcome to the roadmap of **PaxD**! This document outlines our vision, goals, an
 | Improved search indexing | Optimize the search indexing process for faster and more accurate results | 🟢 Completed | Released immediately |
 | Replace pip with uv for package dependencies | Switch from using pip to uv for managing Python package dependencies, due to its major speed increase | 🟢 Completed | Released immediately |
 | Improved error handling | Enhance error messages and handling throughout the application for better user experience | 🟢 Completed | Released immediately |
+| Metapackages support | Introduce support for metapackages, allowing users to install a collection of related packages with a single command | 🟢 Completed | Released immediately |
 
 ### Version 1.8.0
 
