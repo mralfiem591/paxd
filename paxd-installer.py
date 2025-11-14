@@ -171,9 +171,17 @@ with open(os.path.join(local_app_data, "com.mralfiem591.paxd", ".FIRSTRUN"), "w"
 print(Fore.GREEN + "4- Installing dependencies of PaxD...")
 if os.system("uv pip install --system requests colorama rich argparse sentry-sdk") != 0:
     print(Fore.RED + "ERROR: Failed to install dependencies via uv. Please ensure you have an active internet connection and try again.")
-    
+
+# pull pyproject.toml
+print(Fore.GREEN + "5- Writing pyproject.toml...")
+pyproject_response = requests.get(f"{repo}/packages/com.mralfiem591.paxd/src/pyproject.toml", headers={"User-Agent": "PaxdInstaller/1.0.0"}, allow_redirects=True)
+pyproject_response.raise_for_status()
+pyproject_data = pyproject_response.text
+with open(os.path.join(local_app_data, "com.mralfiem591.paxd", "pyproject.toml"), "w", encoding="utf-8") as pyproject_file:
+    pyproject_file.write(pyproject_data)
+
 # install paxd-sdk
-print(Fore.GREEN + "5- Installing PaxD SDK...")
+print(Fore.GREEN + "6- Installing PaxD SDK...")
 sdk_response = requests.get(f"{repo}/packages/com.mralfiem591.paxd-sdk/src/main.py", headers={"User-Agent": "PaxdInstaller/1.0.0"}, allow_redirects=True)
 sdk_response.raise_for_status()
 sdk_data = sdk_response.text

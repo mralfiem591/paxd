@@ -48,16 +48,47 @@ def cleanup():
 atexit.register(cleanup)
 
 import subprocess
-import requests # type: ignore (requests is in paxd file dependencies)
 import json
 from pathlib import Path as PathLib
 import hashlib
 import shutil
 import sys
-import argparse # type: ignore (argparse is in paxd file dependencies)
-from colorama import init, Fore, Style  # type: ignore (colorama is in paxd file dependencies)
-import yaml # type: ignore (yaml is in paxd file dependencies)
 import re
+import datetime
+import time
+import stat
+import importlib
+import importlib.abc
+import importlib.util
+
+# Import third-party dependencies with fallbacks
+try:
+    import requests # type: ignore
+except ImportError:
+    print("ERROR: 'requests' module is required but not installed.")
+    print("Please run: uv pip install --system requests")
+    sys.exit(1)
+
+try:
+    import argparse # type: ignore
+except ImportError:
+    print("ERROR: 'argparse' module is required but not installed.")
+    print("Please run: uv pip install --system argparse")
+    sys.exit(1)
+
+try:
+    from colorama import init, Fore, Style  # type: ignore
+except ImportError:
+    print("ERROR: 'colorama' module is required but not installed.")
+    print("Please run: uv pip install --system colorama")
+    sys.exit(1)
+
+try:
+    import yaml # type: ignore
+except ImportError:
+    print("ERROR: 'pyyaml' module is required but not installed.")
+    print("Please run: uv pip install --system pyyaml")
+    sys.exit(1)
 
 # Windows-specific imports with error handling
 try:

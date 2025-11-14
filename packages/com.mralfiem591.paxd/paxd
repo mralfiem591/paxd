@@ -14,7 +14,8 @@
             "paxd.py",
             "run_pkg.py",
             "repository",
-            "LICENSE"
+            "LICENSE",
+            "pyproject.toml"
         ],
         "depend": [
             "pip:requests",
