@@ -29,7 +29,7 @@ except ImportError:
 def fetch_search_index() -> str:
     """Fetch search index CSV from repository"""
     try:
-        repo_url = sdk.GetRepositoryUrl()
+        repo_url = sdk.Repository.GetRepositoryUrl()
         searchindex_url = f"{repo_url}/searchindex.csv"
         
         response = requests.get(searchindex_url, timeout=10)
@@ -84,7 +84,7 @@ def parse_search_index(csv_content: str) -> List[Dict]:
 def is_package_installed(package_id: str) -> bool:
     """Check if package is installed using SDK"""
     try:
-        return sdk.IsInstalled(package_id)
+        return sdk.Package.IsInstalled(package_id)
     except Exception:
         return False
 
@@ -92,7 +92,7 @@ def is_package_installed(package_id: str) -> bool:
 def get_repository_url() -> str:
     """Get repository URL using SDK"""
     try:
-        return sdk.GetRepositoryUrl()
+        return sdk.Repository.GetRepositoryUrl()
     except Exception:
         return "https://github.com/mralfiem/paxd-packages"  # Default fallback
 
