@@ -39,7 +39,7 @@ jobs:
           uv run generate_searchindex.py
       
       - name: Check for changes
-        run: git diff --exit-code searchindex.csv || echo "changed=true" >> $GITHUB_OUTPUT
+        run: git diff --exit-code -- searchindex.csv || echo "changed=true" >> $GITHUB_OUTPUT
         working-directory: ${{ github.workspace }}
       
       - name: Commit and push if changed
