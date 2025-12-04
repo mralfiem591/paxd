@@ -2626,6 +2626,13 @@ def create_argument_parser():
         description='Import and install packages from export.paxd'
     )
     
+    # GUI command
+    subparsers.add_parser(
+        'gui',
+        help='Launch the PaxD GUI',
+        description='Start the PaxD graphical user interface'
+    )
+    
     # Init command
     init_parser = subparsers.add_parser(
         'init',
@@ -2992,6 +2999,17 @@ def main():
                 os.remove(firstrun_file)
             print(f"{Fore.GREEN}PaxD first time run initialization complete.")
             print(f"\n{Fore.CYAN}Welcome to PaxD!{Style.RESET_ALL}\nIt is recommended you try out PaxD with our {Fore.YELLOW}paxd-test{Style.RESET_ALL} package - install it with {Fore.GREEN}`paxd install paxd-test`{Style.RESET_ALL}, and run paxd-test to see it in action!\n\nYou can uninstall it later with {Fore.RED}`paxd uninstall paxd-test`{Style.RESET_ALL}.\n")
+            
+        elif args.command == "gui":
+            paxd._verbose_print("Launching PaxD GUI")
+            try:
+                os.system('paxd-gui')
+            except KeyboardInterrupt:
+                pass
+            except:
+                paxd.install("com.mralfiem591.paxd-gui", user_requested=True)
+                os.system('paxd-gui')
+                
             
         else:
             paxd._verbose_print(f"Unknown command: {args.command}")
