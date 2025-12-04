@@ -19,6 +19,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           clean: false  # prevent checkout from deleting .git
+          fetch-depth: 0
 
       - name: Generate search index
         run: python3 generate_searchindex.py
