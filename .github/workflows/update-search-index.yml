@@ -2,38 +2,46 @@ name: Update Search Index
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
     paths:
       - 'packages/**'
       - 'resolution'
+  
   workflow_dispatch:
 
 jobs:
   update-index:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     permissions:
       contents: write
-
+    
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          clean: false  # prevent checkout from deleting .git
-          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install dependencies
+        run: |
+          pip install pyyaml
+
+        # PyYAML is the only dependency needed to run the search index generator. Also, no need to source the venv, UV handles that automatically for both running and installing.
 
       - name: Generate search index
-        run: python3 generate_searchindex.py
-
+        run: |
+          python generate_searchindex.py
+      
       - name: Check for changes
         id: git-check
         run: |
-          git diff --exit-code -- searchindex.csv || echo "changed=true" >> $GITHUB_OUTPUT
-
+          git diff --exit-code searchindex.csv || echo "changed=true" >> $GITHUB_OUTPUT
+      
       - name: Commit and push if changed
         if: steps.git-check.outputs.changed == 'true'
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add searchindex.csv
-          git commit -m "Update search index"
+          git commit -m "chore: Rebuild SearchIndex due to updates"
           git push
