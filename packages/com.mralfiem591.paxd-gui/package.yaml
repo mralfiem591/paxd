@@ -21,6 +21,7 @@ install:
       - requests
     paxd:
       - com.mralfiem591.paxd-sdk
+      - com.mralfiem591.paxd
   
   firstrun: false
   updaterun: false
