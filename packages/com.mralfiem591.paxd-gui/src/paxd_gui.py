@@ -290,7 +290,7 @@ class PackageListFrame(ttk.Frame):
         ttk.Label(search_frame, text="Search:").pack(side=tk.LEFT, padx=(0, 5))
         
         self.search_var = tk.StringVar()
-        self.search_var.trace('w', self.on_search_changed)
+        self.search_var.trace_add('write', self.on_search_changed)
         search_entry = ttk.Entry(search_frame, textvariable=self.search_var)
         search_entry.pack(fill=tk.X, side=tk.LEFT, expand=True)
         
@@ -597,9 +597,10 @@ class PackageDetailsFrame(ttk.Frame):
 # ============================================================================
 
 class QueueWindow:
-    def __init__(self, parent, queue, package_manager):
+    def __init__(self, parent, queue, package_manager, refresh_callback=None):
         self.queue = queue
         self.package_manager = package_manager
+        self.parent_refresh_callback = refresh_callback
         
         self.window = tk.Toplevel(parent)
         self.window.title("Processing Queue")
@@ -673,7 +674,7 @@ class QueueWindow:
                             self.log(f"✗ Error: {result.get('message', 'Unknown error')}")
                             
                             # Handle update retry option
-                            if action == 'update' and 'already the latest version' in result.get('output', ''):
+                            if action == 'update' and 'is already up to date.' in result.get('output', ''):
                                 if messagebox.askyesno(
                                     "Force Update", 
                                     f"{package['package_name']} is already up to date. Force update anyway?",
@@ -694,6 +695,10 @@ class QueueWindow:
                 self.progress_bar['value'] = len(self.queue)
                 self.progress_label.config(text="Processing complete!")
                 self.close_button.config(state=tk.NORMAL)
+                
+                # Trigger refresh in parent window
+                if hasattr(self, 'parent_refresh_callback') and self.parent_refresh_callback:
+                    self.parent_refresh_callback()
                 
             except Exception as e:
                 self.log(f"Critical error: {str(e)}")
@@ -853,18 +858,15 @@ class PaxDGUI:
             return
         
         # Show queue window
-        queue_window = QueueWindow(self.root, self.queue, self.package_manager)
+        queue_window = QueueWindow(self.root, self.queue, self.package_manager, self.refresh_packages)
         queue_window.start_processing()
         
         # Clear queue after processing starts
         self.queue = []
         self.update_queue_display()
         
-        # Refresh packages after processing
-        queue_window.window.protocol("WM_DELETE_WINDOW", lambda: [
-            queue_window.window.destroy(),
-            self.refresh_packages()
-        ])
+        # Handle window close
+        queue_window.window.protocol("WM_DELETE_WINDOW", queue_window.window.destroy)
     
     def refresh_packages(self):
         """Refresh package list"""
