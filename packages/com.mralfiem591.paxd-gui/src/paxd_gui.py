@@ -656,21 +656,40 @@ class PackageDetailsFrame(ttk.Frame):
     
     def update_action_buttons(self, installed: bool):
         """Update action button states"""
-        # Check if this is the GUI package itself (prevent self-uninstallation)
+        # Check if this is a protected package (prevent uninstallation)
         is_gui_package = (self.current_package and 
                          (self.current_package.get('package_id') == 'com.mralfiem591.paxd-gui' or
                           'paxd-gui' in self.current_package.get('aliases', [])))
         
+        is_main_paxd = (self.current_package and 
+                       (self.current_package.get('package_id') == 'com.mralfiem591.paxd' or
+                        'paxd' in self.current_package.get('aliases', [])))
+        
+        is_paxd_sdk = (self.current_package and 
+                      (self.current_package.get('package_id') == 'com.mralfiem591.paxd-sdk' or
+                       'paxd-sdk' in self.current_package.get('aliases', [])))
+        
+        # Any protected package cannot be uninstalled
+        is_protected = is_gui_package or is_main_paxd or is_paxd_sdk
+        
         if installed:
             self.install_radio.config(state=tk.DISABLED)
             self.update_radio.config(state=tk.NORMAL)
-            # Disable uninstall for the GUI package itself
-            self.uninstall_radio.config(state=tk.DISABLED if is_gui_package else tk.NORMAL)
+            # Disable uninstall for protected packages
+            self.uninstall_radio.config(state=tk.DISABLED if is_protected else tk.NORMAL)
             
-            # Show uninstall instruction for GUI package
+            # Show appropriate uninstall instruction/warning for protected packages
             if is_gui_package:
                 self.uninstall_note_label.config(
                     text="(uninstall by closing this GUI and executing the command 'paxd uninstall paxd-gui'!)"
+                )
+            elif is_main_paxd:
+                self.uninstall_note_label.config(
+                    text="(cannot be uninstalled; is main PaxD core and needed for commands)"
+                )
+            elif is_paxd_sdk:
+                self.uninstall_note_label.config(
+                    text="(cannot be uninstalled; is dependency of this GUI, and is required for proper functionality)"
                 )
             else:
                 self.uninstall_note_label.config(text="")
