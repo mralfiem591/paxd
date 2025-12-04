@@ -3009,6 +3009,12 @@ def main():
             except subprocess.CalledProcessError:
                 paxd.install("com.mralfiem591.paxd-gui", user_requested=True)
                 subprocess.run(['paxd-gui'], check=True, shell=True)
+            finally:
+                messages = paxd_sdk.Messaging.GetMessages()
+                for message in messages:
+                    if message['from'] == 'com.mralfiem591.paxd-gui' and message['message']['queue_gui_uninstall'] == True:
+                        print("Received uninstall request from GUI, uninstalling PaxD GUI!")
+                        paxd.uninstall("com.mralfiem591.paxd-gui")
             
                 
             
