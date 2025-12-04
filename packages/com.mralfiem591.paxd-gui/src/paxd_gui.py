@@ -5,7 +5,7 @@ Combined single-file version with all components included.
 """
 
 import tkinter as tk
-from tkinter import ttk, messagebox, scrolledtext
+from tkinter import ttk, messagebox, scrolledtext, filedialog
 import threading
 import subprocess
 import sys
@@ -15,6 +15,7 @@ import csv
 import io
 from typing import List, Dict, Optional, Callable
 import atexit
+import shutil
 
 atexit.register(lambda: print("PaxD GUI has exited.\nSo long and thanks for all the fish!"))
 
@@ -262,6 +263,74 @@ class PackageManager:
         """Uninstall package"""
         result = self.execute_command(['uninstall', identifier])
         return result
+    
+    def import_packages(self, import_file_path: str) -> Dict:
+        """Import packages from .paxd file"""
+        try:
+            # Get package directory from SDK
+            package_dir = sdk.Package.GetPackageDir()
+            export_path = os.path.join(package_dir, "export.paxd")
+            
+            # Copy the selected file to export.paxd in package directory
+            shutil.copy2(import_file_path, export_path)
+            
+            # Run paxd import
+            result = self.execute_command(['import'])
+            
+            # Clean up the temporary export.paxd file
+            try:
+                os.remove(export_path)
+            except Exception:
+                pass  # Ignore cleanup errors
+            
+            return result
+            
+        except Exception as e:
+            return {
+                'success': False,
+                'return_code': -1,
+                'output': '',
+                'error': f'Import error: {str(e)}'
+            }
+    
+    def export_packages(self, export_file_path: str) -> Dict:
+        """Export packages to .paxd file"""
+        try:
+            # Run paxd export
+            result = self.execute_command(['export'])
+            
+            if result['success']:
+                # Get package directory from SDK
+                package_dir = sdk.Package.GetPackageDir()
+                export_source = os.path.join(package_dir, "export.paxd")
+                
+                # Check if export.paxd was created
+                if os.path.exists(export_source):
+                    # Copy to target location
+                    shutil.copy2(export_source, export_file_path)
+                    
+                    # Clean up the original export.paxd
+                    try:
+                        os.remove(export_source)
+                    except Exception:
+                        pass  # Ignore cleanup errors
+                else:
+                    return {
+                        'success': False,
+                        'return_code': -1,
+                        'output': result.get('output', ''),
+                        'error': 'Export file was not created'
+                    }
+            
+            return result
+            
+        except Exception as e:
+            return {
+                'success': False,
+                'return_code': -1,
+                'output': '',
+                'error': f'Export error: {str(e)}'
+            }
 
 
 # ============================================================================
@@ -835,17 +904,100 @@ class PaxDGUI:
         # Setup GUI
         self.setup_gui()
         self.load_packages()
+    
+    def setup_menu(self):
+        """Setup the menu bar"""
+        menubar = tk.Menu(self.root)
+        self.root.config(menu=menubar)
+        
+        # File menu
+        file_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="File", menu=file_menu)
+        file_menu.add_command(label="Import from file", command=self.import_from_file)
+        file_menu.add_command(label="Export to file", command=self.export_to_file)
+    
+    def import_from_file(self):
+        """Import packages from a .paxd file"""
+        file_path = filedialog.askopenfilename(
+            title="Import from .paxd file",
+            filetypes=[("PaxD files", "*.paxd"), ("All files", "*.*")],
+            defaultextension=".paxd"
+        )
+        
+        if file_path:
+            # Validate file extension
+            if not file_path.lower().endswith('.paxd'):
+                messagebox.showerror("Invalid File", "Please select a .paxd file.")
+                return
+            
+            # Check if file exists
+            if not os.path.exists(file_path):
+                messagebox.showerror("File Not Found", "The selected file does not exist.")
+                return
+            
+            def import_in_thread():
+                try:
+                    self.status_var.set("Importing packages...")
+                    result = self.package_manager.import_packages(file_path)
+                    
+                    if result['success']:
+                        self.root.after(0, lambda: messagebox.showinfo("Import Successful", "Packages imported successfully!"))
+                        self.root.after(0, self.refresh_packages)  # Refresh to show imported packages
+                    else:
+                        error_msg = result.get('error', 'Unknown error')
+                        self.root.after(0, lambda: messagebox.showerror("Import Failed", f"Failed to import packages:\n{error_msg}"))
+                    
+                    self.root.after(0, lambda: self.status_var.set("Ready"))
+                except Exception as e:
+                    self.root.after(0, lambda: messagebox.showerror("Import Error", f"Error during import: {str(e)}"))
+                    self.root.after(0, lambda: self.status_var.set("Ready"))
+            
+            threading.Thread(target=import_in_thread, daemon=True).start()
+    
+    def export_to_file(self):
+        """Export packages to a .paxd file"""
+        file_path = filedialog.asksaveasfilename(
+            title="Export to .paxd file",
+            filetypes=[("PaxD files", "*.paxd"), ("All files", "*.*")],
+            defaultextension=".paxd"
+        )
+        
+        if file_path:
+            # Ensure .paxd extension
+            if not file_path.lower().endswith('.paxd'):
+                file_path += '.paxd'
+            
+            def export_in_thread():
+                try:
+                    self.status_var.set("Exporting packages...")
+                    result = self.package_manager.export_packages(file_path)
+                    
+                    if result['success']:
+                        self.root.after(0, lambda: messagebox.showinfo("Export Successful", f"Packages exported to:\n{file_path}"))
+                    else:
+                        error_msg = result.get('error', 'Unknown error')
+                        self.root.after(0, lambda: messagebox.showerror("Export Failed", f"Failed to export packages:\n{error_msg}"))
+                    
+                    self.root.after(0, lambda: self.status_var.set("Ready"))
+                except Exception as e:
+                    self.root.after(0, lambda: messagebox.showerror("Export Error", f"Error during export: {str(e)}"))
+                    self.root.after(0, lambda: self.status_var.set("Ready"))
+            
+            threading.Thread(target=export_in_thread, daemon=True).start()
         
     def setup_gui(self):
         """Setup the main GUI layout"""
         # Configure grid weights
-        self.root.grid_rowconfigure(1, weight=1)
+        self.root.grid_rowconfigure(2, weight=1)  # Adjusted for menu bar
         self.root.grid_columnconfigure(0, weight=1)
         self.root.grid_columnconfigure(1, weight=1)
         
+        # Create menu bar
+        self.setup_menu()
+        
         # Top frame with apply button
         top_frame = ttk.Frame(self.root, padding="10")
-        top_frame.grid(row=0, column=0, columnspan=2, sticky="ew")
+        top_frame.grid(row=1, column=0, columnspan=2, sticky="ew")
         
         # Apply button
         self.apply_button = ttk.Button(
@@ -878,7 +1030,7 @@ class PaxDGUI:
         
         # Main content area
         main_frame = ttk.Frame(self.root, padding="10")
-        main_frame.grid(row=1, column=0, columnspan=2, sticky="nsew")
+        main_frame.grid(row=2, column=0, columnspan=2, sticky="nsew")
         main_frame.grid_rowconfigure(0, weight=1)
         main_frame.grid_columnconfigure(0, weight=2)
         main_frame.grid_columnconfigure(1, weight=1)
@@ -901,7 +1053,7 @@ class PaxDGUI:
         self.status_var = tk.StringVar()
         self.status_var.set("Ready")
         status_bar = ttk.Label(self.root, textvariable=self.status_var, relief=tk.SUNKEN)
-        status_bar.grid(row=2, column=0, columnspan=2, sticky="ew")
+        status_bar.grid(row=3, column=0, columnspan=2, sticky="ew")
         
     def load_packages(self):
         """Load packages from search index"""
