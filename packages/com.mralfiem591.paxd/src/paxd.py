@@ -2848,7 +2848,6 @@ def main():
             paxd.update(args.package_name, force=force_flag, skip_checksum=args.skip_checksum)
         elif args.command == "update-all":
             paxd._verbose_print("Updating all packages")
-            paxd._verbose_print("Updating all packages")
             paxd.update_all()
         elif args.command == "info":
             paxd._verbose_print(f"Getting info for package: {args.package_name}")
