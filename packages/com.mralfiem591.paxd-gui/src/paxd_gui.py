@@ -216,8 +216,7 @@ class PackageManager:
                 result = self.install_package(package_identifier)
             elif action == 'update':
                 result = self.update_package(package_identifier)
-            elif action == 'force_update':
-                result = self.force_update_package(package_identifier)
+
             elif action == 'uninstall':
                 result = self.uninstall_package(package_identifier)
             else:
@@ -233,7 +232,6 @@ class PackageManager:
                 action_past = {
                     'install': 'installed',
                     'update': 'updated',
-                    'force_update': 'force updated',
                     'uninstall': 'uninstalled'
                 }.get(action, action)
                 result['message'] = f'{package["package_name"]} {action_past} successfully'
@@ -258,11 +256,6 @@ class PackageManager:
     def update_package(self, identifier: str) -> Dict:
         """Update package"""
         result = self.execute_command(['update', identifier])
-        return result
-    
-    def force_update_package(self, identifier: str) -> Dict:
-        """Force update package"""
-        result = self.execute_command(['update', '-f', identifier])
         return result
     
     def uninstall_package(self, identifier: str) -> Dict:
@@ -334,13 +327,19 @@ class PackageListFrame(ttk.Frame):
         self.tree.column('author', width=120, minwidth=100)
         self.tree.column('status', width=100, minwidth=80)
         
-        # Scrollbar
-        scrollbar = ttk.Scrollbar(list_frame, orient=tk.VERTICAL, command=self.tree.yview)
-        self.tree.configure(yscrollcommand=scrollbar.set)
+        # Scrollbars
+        v_scrollbar = ttk.Scrollbar(list_frame, orient=tk.VERTICAL, command=self.tree.yview)
+        h_scrollbar = ttk.Scrollbar(list_frame, orient=tk.HORIZONTAL, command=self.tree.xview)
+        self.tree.configure(yscrollcommand=v_scrollbar.set, xscrollcommand=h_scrollbar.set)
         
-        # Pack treeview and scrollbar
-        self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        # Pack treeview and scrollbars
+        self.tree.grid(row=0, column=0, sticky='nsew')
+        v_scrollbar.grid(row=0, column=1, sticky='ns')
+        h_scrollbar.grid(row=1, column=0, sticky='ew')
+        
+        # Configure grid weights
+        list_frame.grid_rowconfigure(0, weight=1)
+        list_frame.grid_columnconfigure(0, weight=1)
         
         # Bind selection event
         self.tree.bind('<<TreeviewSelect>>', self.on_selection_changed)
@@ -773,24 +772,8 @@ class QueueWindow:
                             if is_gui_update:
                                 self.gui_was_updated = True
                         elif is_already_up_to_date and action == 'update':
-                            # Handle update retry option for "already up to date" case
-                            if messagebox.askyesno(
-                                "Force Update", 
-                                f"{package['package_name']} is already up to date. Force update anyway?",
-                                parent=self.window
-                            ):
-                                self.log(f"Forcing update for {package['package_name']}...")
-                                force_result = self.package_manager.execute_action(package, 'force_update')
-                                if force_result.get('success'):
-                                    self.log(f"✓ Force update successful")
-                                    # Mark GUI as updated if this was a GUI force update
-                                    if (package.get('package_id') == 'com.mralfiem591.paxd-gui' or
-                                        'paxd-gui' in package.get('aliases', [])):
-                                        self.gui_was_updated = True
-                                else:
-                                    self.log(f"✗ Force update failed: {force_result.get('message')}")
-                            else:
-                                self.log(f"ℹ Skipped: {package['package_name']} is already up to date")
+                            # Skip packages that are already up to date
+                            self.log(f"ℹ Skipped: {package['package_name']} is already up to date")
                         else:
                             self.log(f"✗ Error: {result.get('message', 'Unknown error')}")
                     
