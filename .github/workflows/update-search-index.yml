@@ -2,16 +2,11 @@ name: Update Search Index
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
     paths:
       - 'packages/**'
       - 'resolution'
-  
   workflow_dispatch:
-
-env:
-  REPO_DIR: /srv/dev-disk-by-uuid-C8EC4407EC43EDEE/General/actions-runner/_work/paxd/paxd
 
 jobs:
   update-index:
@@ -23,30 +18,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          path: ${{ env.REPO_DIR }}
-          clean: false
-
-      - name: Set up Python virtual environment
-        working-directory: ${{ env.REPO_DIR }}
-        run: uv venv
-
-      - name: Install dependencies
-        working-directory: ${{ env.REPO_DIR }}
-        run: uv pip install pyyaml
+          clean: false  # prevent checkout from deleting .git
 
       - name: Generate search index
-        working-directory: ${{ env.REPO_DIR }}
-        run: uv run generate_searchindex.py
+        run: python3 generate_searchindex.py
 
       - name: Check for changes
         id: git-check
-        working-directory: ${{ env.REPO_DIR }}
-        run: git diff --exit-code -- searchindex.csv || echo "changed=true" >> $GITHUB_OUTPUT
+        run: |
+          git diff --exit-code -- searchindex.csv || echo "changed=true" >> $GITHUB_OUTPUT
 
       - name: Commit and push if changed
         if: steps.git-check.outputs.changed == 'true'
-        working-directory: ${{ env.REPO_DIR }}
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
