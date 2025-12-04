@@ -322,10 +322,10 @@ class PackageListFrame(ttk.Frame):
         self.tree.heading('status', text='Status', anchor=tk.W)
         
         self.tree.column('#0', width=30, minwidth=30, stretch=False)
-        self.tree.column('name', width=200, minwidth=150)
-        self.tree.column('version', width=80, minwidth=60)
-        self.tree.column('author', width=120, minwidth=100)
-        self.tree.column('status', width=100, minwidth=80)
+        self.tree.column('name', width=150, minwidth=100, stretch=True)
+        self.tree.column('version', width=60, minwidth=50, stretch=False)
+        self.tree.column('author', width=80, minwidth=60, stretch=True)
+        self.tree.column('status', width=80, minwidth=60, stretch=False)
         
         # Scrollbars
         v_scrollbar = ttk.Scrollbar(list_frame, orient=tk.VERTICAL, command=self.tree.yview)
