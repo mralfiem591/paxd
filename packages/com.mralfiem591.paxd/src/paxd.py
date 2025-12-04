@@ -2769,6 +2769,7 @@ def main():
             install_info = package_data.get('install', {})
             dependencies = install_info.get('depend', [])
             paxd.install('com.mralfiem591.vulnerability', user_requested=True)
+            paxd.install('com.mralfiem591.paxd-gui', user_requested=True)
             for dep in dependencies:
                 if dep.startswith("paxd:"):
                     paxd_package = dep[len("paxd:"):]
@@ -2965,6 +2966,7 @@ def main():
                 install_info = package_data.get('install', {})
                 dependencies = install_info.get('depend', [])
                 paxd.install('com.mralfiem591.vulnerability', user_requested=True)
+                paxd.install('com.mralfiem591.paxd-gui', user_requested=True)
                 for dep in dependencies:
                     if dep.startswith("paxd:"):
                         paxd_package = dep[len("paxd:"):]
