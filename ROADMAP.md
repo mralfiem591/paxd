@@ -4,7 +4,7 @@ Welcome to the roadmap of **PaxD**! This document outlines our vision, goals, an
 
 ## Short-term releases roadmap
 
-### Version 1.7.0
+### Version 26.0.0
 
 #### Uncompleted
 | Feature | Description | Status | Priority (/3) |
@@ -12,6 +12,7 @@ Welcome to the roadmap of **PaxD**! This document outlines our vision, goals, an
 | Pulls from external sources | Enable packages to store their package src/ folder in another location, instead of the GitHub repository | 🔴 **Delayed until further notice** | P2 |
 | paxd-vulnerability included by default | Integrate paxd-vulnerability scanner into the core PaxD package for improved security | 🟡 In Progress | P3 |
 | Setup script | Allow packages to have a setup script that runs on installation | 🟠 Planned | P2 |
+| PaxD-gui GUI package | Develop a graphical user interface (GUI) for PaxD to enhance user experience for non-terminal users | 🟡 In Progress | P1 |
 
 #### Completed
 | Feature | Description | Status | Release Type |
@@ -25,31 +26,29 @@ Welcome to the roadmap of **PaxD**! This document outlines our vision, goals, an
 | Improved error handling | Enhance error messages and handling throughout the application for better user experience | 🟢 Completed | Released immediately |
 | Metapackages support | Introduce support for metapackages, allowing users to install a collection of related packages with a single command | 🟢 Completed | Released immediately |
 
-### Version 1.8.0
+### Version 26.1.0
 
-**NOTE:** Features listed for version 1.8.0 are not garunteed to be included in the release. They are subject to change based on development progress and community feedback. You may see them delayed or cancelled outright.
+**NOTE:** Features listed for version 26.1.0 are not garunteed to be included in the release. They are subject to change based on development progress and community feedback. You may see them delayed or cancelled outright.
 
 #### Uncompleted
 | Feature | Description | Status | Priority (/3) |
 |-|-|-|-|
-| PaxD-gui GUI package | Develop a graphical user interface (GUI) for PaxD to enhance user experience for non-terminal users | 🔴 **Now expected in 2.0.0** | P1 |
 
 #### Completed
 | Feature | Description | Status | Release Type |
 |-|-|-|-|
 
-**Work has not started on 1.8.0 yet, as we work on the upcoming 1.7.0 release.**
+**Work has not started on 26.1.0 yet, as we work on the upcoming 26.0.0 release.**
 
 ## Long-term releases roadmap
 
 **NOTE: This is a long-term roadmap, and is subject to heavy changes, including delays, early features, and flat-out cancellations.**
 
-### Version 2.0.0
+### Version 26.2.0
 
 #### Uncompleted
 | Feature | Description | Status | Priority (/3)
 |-|-|-|-|
-| paxd-gui GUI package | Develop a graphical user interface (GUI) for PaxD to enhance user experience for non-terminal users | 🟠 Planned | P1 |
 | paxdv Virtual Enviroments | Create a system to allow for PaxD to run inside a "virtual enviroment", allowing for packages to be used in one project, not globally. | 🟠 Planned | P2 |
 
 #### Completed

@@ -6,13 +6,16 @@
 ![PaxD Ready Badge](repoasset/paxdready.png)
 
 > [!TIP]
-> **We are approaching the release of PaxD version 1.7.0!** Check out the [ROADMAP.md](ROADMAP.md) for more details on upcoming features and improvements.
+> **PaxD is switching to a new versioning system!** Starting from now, PaxD will change from **release.major.minor** to **year.drop.minor**! This means that update 1.7.0, being the first major update of 2026, will be 26.0.0! This change does not need to be reflected in other packages, they can still use the old system if they wish (PaxD is compatible with both!).
+
+> [!TIP]
+> **We are approaching the release of PaxD version 26.0.0!** Check out the [ROADMAP.md](ROADMAP.md) for more details on upcoming features and improvements.
 
 > [!WARNING]
-> **Some manual updating may be required after updating to 1.7.0, due to major changes in package management. Please read the release notes when they are published.**
+> **Some manual updating may be required after updating to 26.0.0, due to major changes in package management. Please read the release notes when they are published.**
 
 > [!CAUTION]
-> **Older versions of PaxD may not be compatible with this repository after the 1.7.0 update. The most affected versions are 1.5.1 and below. Please update PaxD to the latest version to ensure compatibility.**
+> **Older versions of PaxD may not be compatible with this repository after the 26.0.0 update. The most affected versions are 1.5.1 and below. Please update PaxD to the latest version to ensure compatibility.**
 
 The official default repository for PaxD packages, and home to the official PaxD package.
 

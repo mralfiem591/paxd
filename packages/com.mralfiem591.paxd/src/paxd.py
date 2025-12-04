@@ -1009,7 +1009,7 @@ class PaxD:
             error_msg = str(e)
             if "not found in repository" in error_msg:
                 print(f"{Fore.RED}Package '{Fore.YELLOW}{package_name}{Fore.RED}' was not found in the repository.")
-                print(f"{Fore.CYAN}Try searching for similar packages with: {Fore.GREEN}paxd search {package_name}")
+                print(f"{Fore.CYAN}Try searching for similar packages with: {Fore.GREEN}paxd search {package_name}?")
             else:
                 print(f"{Fore.RED}Error: {error_msg}")
         except requests.HTTPError as e:
