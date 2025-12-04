@@ -888,6 +888,7 @@ class QueueWindow:
                                     "The PaxD GUI has been queued for uninstall.\n\n"
                                     "When you exit this application, the main PaxD package will "
                                     "automatically uninstall the GUI for you.\n\n"
+                                    "IMPORTANT: If you have updated the GUI in this session, you must rerun the GUI to complete the uninstall!\n\n"
                                     "Thank you for using PaxD GUI!"
                                 ))
                             else:
