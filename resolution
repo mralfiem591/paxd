@@ -21,5 +21,8 @@
     ],
     "com.mralfiem591.paxd-publish": [
         "paxdp"
+    ],
+    "com.mralfiem591.paxd-gui": [
+        "paxd-gui"
     ]
 }
