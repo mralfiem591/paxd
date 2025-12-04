@@ -264,35 +264,6 @@ class PackageManager:
         result = self.execute_command(['uninstall', identifier])
         return result
     
-    def import_packages(self, import_file_path: str) -> Dict:
-        """Import packages from .paxd file"""
-        try:
-            # Get package directory from SDK
-            package_dir = sdk.PackageDir
-            export_path = os.path.join(package_dir, "export.paxd")
-            
-            # Copy the selected file to export.paxd in package directory
-            shutil.copy2(import_file_path, export_path)
-            
-            # Run paxd import
-            result = self.execute_command(['import'])
-            
-            # Clean up the temporary export.paxd file
-            try:
-                os.remove(export_path)
-            except Exception:
-                pass  # Ignore cleanup errors
-            
-            return result
-            
-        except Exception as e:
-            return {
-                'success': False,
-                'return_code': -1,
-                'output': '',
-                'error': f'Import error: {str(e)}'
-            }
-    
     def export_packages(self, export_file_path: str) -> Dict:
         """Export packages to .paxd file"""
         try:
@@ -933,19 +904,85 @@ class PaxDGUI:
             
             def import_in_thread():
                 try:
-                    self.status_var.set("Importing packages...")
-                    result = self.package_manager.import_packages(file_path)
+                    self.status_var.set("Parsing package file...")
                     
-                    if result['success']:
-                        self.root.after(0, lambda: messagebox.showinfo("Import Successful", "Packages imported successfully!"))
-                        self.root.after(0, self.refresh_packages)  # Refresh to show imported packages
+                    # Read and parse the .paxd file
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        lines = f.readlines()
+                    
+                    # Parse package names (one per line, strip whitespace)
+                    package_names = []
+                    for line in lines:
+                        package_name = line.strip()
+                        if package_name and not package_name.startswith('#'):  # Skip empty lines and comments
+                            package_names.append(package_name)
+                    
+                    if not package_names:
+                        self.root.after(0, lambda: messagebox.showwarning("No Packages", "No package names found in the file."))
+                        self.root.after(0, lambda: self.status_var.set("Ready"))
+                        return
+                    
+                    # Find packages to queue for installation
+                    packages_to_install = []
+                    already_installed = []
+                    not_found = []
+                    
+                    for package_name in package_names:
+                        # Find the package in our loaded packages list
+                        found_package = None
+                        for package in self.packages:
+                            # Check if package name matches package_name, package_id, or any alias
+                            if (package['package_name'].lower() == package_name.lower() or
+                                package['package_id'].lower() == package_name.lower() or
+                                package_name.lower() in [alias.lower() for alias in package.get('aliases', [])]):
+                                found_package = package
+                                break
+                        
+                        if found_package:
+                            if found_package.get('installed', False):
+                                already_installed.append(package_name)
+                            else:
+                                packages_to_install.append(found_package)
+                        else:
+                            not_found.append(package_name)
+                    
+                    # Queue packages for installation
+                    queued_count = 0
+                    for package in packages_to_install:
+                        # Remove any existing action for this package
+                        self.queue = [item for item in self.queue if item['package']['package_id'] != package['package_id']]
+                        
+                        # Add install action
+                        self.queue.append({
+                            'package': package,
+                            'action': 'install'
+                        })
+                        queued_count += 1
+                    
+                    # Update queue display and show results
+                    self.root.after(0, self.update_queue_display)
+                    
+                    # Build result message
+                    message_parts = []
+                    if queued_count > 0:
+                        message_parts.append(f"Queued {queued_count} packages for installation.")
+                    if already_installed:
+                        message_parts.append(f"Already installed ({len(already_installed)}): {', '.join(already_installed)}")
+                    if not_found:
+                        message_parts.append(f"Not found ({len(not_found)}): {', '.join(not_found)}")
+                    
+                    result_message = "\n\n".join(message_parts)
+                    
+                    if queued_count > 0:
+                        result_message += "\n\nClick 'Apply Changes' to install the queued packages."
+                        self.root.after(0, lambda: messagebox.showinfo("Import Complete", result_message))
                     else:
-                        error_msg = result.get('error', 'Unknown error')
-                        self.root.after(0, lambda: messagebox.showerror("Import Failed", f"Failed to import packages:\n{error_msg}"))
+                        self.root.after(0, lambda: messagebox.showwarning("Import Complete", result_message))
                     
                     self.root.after(0, lambda: self.status_var.set("Ready"))
+                    
                 except Exception as e:
-                    self.root.after(0, lambda: messagebox.showerror("Import Error", f"Error during import: {str(e)}"))
+                    self.root.after(0, lambda: messagebox.showerror("Import Error", f"Error parsing file: {str(e)}"))
                     self.root.after(0, lambda: self.status_var.set("Ready"))
             
             threading.Thread(target=import_in_thread, daemon=True).start()
