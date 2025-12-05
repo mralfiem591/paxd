@@ -161,11 +161,22 @@ document.addEventListener('DOMContentLoaded', function() {
             this.classList.toggle('active');
         });
         
-        // Close mobile menu when clicking a link
-        document.querySelectorAll('.nav-link').forEach(link => {
+        // Close mobile menu when clicking a link (only for external links or when on mobile)
+        document.querySelectorAll('.nav-link:not([href^="#"])').forEach(link => {
             link.addEventListener('click', () => {
                 navMenu?.classList.remove('active');
                 navToggle?.classList.remove('active');
+            });
+        });
+        
+        // Close mobile menu when clicking anchor links (but don't prevent default)
+        document.querySelectorAll('.nav-link[href^="#"]').forEach(link => {
+            link.addEventListener('click', () => {
+                // Only close mobile menu, don't prevent default anchor behavior
+                if (window.innerWidth <= 768) {
+                    navMenu?.classList.remove('active');
+                    navToggle?.classList.remove('active');
+                }
             });
         });
     }
