@@ -201,16 +201,6 @@ body {
     box-shadow: var(--shadow-medium);
 }
 
-.btn-update {
-    background: var(--accent-color);
-    color: white;
-}
-.btn-update:hover {
-    background: #0ea5e9;
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-large);
-}
-
 .btn-outline {
     background: transparent;
     color: var(--primary-color);
@@ -282,17 +272,6 @@ body {
     color: #f0f6fc;
     font-size: 0.875rem;
     font-weight: 500;
-}
-
-.code-content {
-    padding: 1.5rem;
-}
-
-.code-content pre {
-    margin: 0;
-    font-family: 'Fira Code', 'JetBrains Mono', Monaco, 'Cascadia Code', Consolas, monospace;
-    font-size: 0.875rem;
-    line-height: 1.6;
 }
 
 /* Sections */
