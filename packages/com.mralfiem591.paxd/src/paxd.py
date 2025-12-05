@@ -1864,6 +1864,7 @@ class PaxD:
             print(f"{Fore.YELLOW}Name:{Style.RESET_ALL} {repo_data.get('repo_info', {}).get('repo_name', 'Unknown')}")
             print(f"{Fore.MAGENTA}Author:{Style.RESET_ALL} {repo_data.get('repo_info', {}).get('repo_author', 'Unknown')}")
             print(f"{Fore.WHITE}Description:{Style.RESET_ALL} {repo_data.get('repo_info', {}).get('repo_description', 'No description provided.')}")
+            print(f"{Fore.GREEN}Website:{Style.RESET_ALL} {repo_data.get('repo_info', {}).get('repo_site', 'No website provided.')}")
                 
             print(f"{Fore.BLUE}URL:{Style.RESET_ALL} {repo_url}")
             print(f"{Fore.BLUE}{'=' * 60}")
