@@ -135,6 +135,9 @@ def generate_searchindex():
     for package_path in sorted(packages_dir.iterdir()):
         if not package_path.is_dir():
             continue
+        if package_path.name == "metapackages":
+            print("Skipping folder 'metapackages', as it is not a package. Will be checked later.")
+            continue
         
         print(f"Processing {package_path.name}...")
         
