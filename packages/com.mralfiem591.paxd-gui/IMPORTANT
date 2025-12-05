@@ -1,0 +1,16 @@
+PaxD GUI versions 1.1.7 and 1.1.8 have major flaws, that can prevent startup in some enviroments.
+
+Please upgrade to version 1.1.9 or later, via the command `paxd update paxd-gui`.
+
+You may notice errors relating to "main thread not in main loop" or FileNotFound/WinError 2. These can result in a range of issues, some of which known are:
+- Immediate GUI crash - 1.1.7 only
+- Empty package list - both versions affected
+- GUI crashing, starting back up, and crashing again - 1.1.7 only
+- Error popup, and no GUI - 1.1.8 only
+
+Please update ASAP to the patched version(s) - 1.1.9 or later - to avoid these issues.
+
+We apologise for any inconvenience caused.
+
+    - mralfiem591
+    Maintainer of PaxD and PaxD GUI
