@@ -1,5 +1,8 @@
 name: Update Search Index
 
+permissions:
+  contents: write
+
 on:
   push:
     paths:
