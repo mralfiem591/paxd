@@ -3,7 +3,7 @@ name: Update Search Index
 on:
   push:
     paths:
-      - "packages/**/*.meta"
+      - "packages/metapackages/*.meta"
       - "packages/**/paxd"
       - "packages/**/paxd.yaml"
       - "packages/**/package.yaml"
