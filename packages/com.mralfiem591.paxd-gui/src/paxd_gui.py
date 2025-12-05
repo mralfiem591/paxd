@@ -926,7 +926,7 @@ class QueueWindow:
         """Restart the application after GUI update"""
         try:
             # Start new instance
-            os.system("start cmd /c paxd-gui")
+            os.system("start cmd /c paxd gui")
             self.log("Handoff to new GUI instance was a success! This instance will now exit.")
             # Exit current instance
             os._exit(0)
