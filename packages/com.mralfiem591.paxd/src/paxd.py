@@ -2522,6 +2522,18 @@ class PaxD:
         try:
             import winreg
             
+            # Check if protocol is already registered
+            protocol_key = r"SOFTWARE\Classes\paxd"
+            try:
+                with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, protocol_key) as key:
+                    # If we can open the key, it's already registered
+                    print(f"{Fore.YELLOW}paxd:// URL protocol is already registered")
+                    print(f"{Fore.BLUE}Use 'paxd register-protocol --unregister' to remove it first")
+                    return True  # Already registered, so technically successful
+            except FileNotFoundError:
+                # Key doesn't exist, so we can proceed with registration
+                pass
+            
             # Check if running as admin
             if not is_admin():
                 print(f"{Fore.RED}Administrator privileges required to register URL protocol")
@@ -2567,13 +2579,23 @@ class PaxD:
         try:
             import winreg
             
+            # Check if protocol is actually registered
+            protocol_key = r"SOFTWARE\\Classes\\paxd"
+            try:
+                with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, protocol_key) as key:
+                    # Key exists, so we can proceed with unregistration
+                    pass
+            except FileNotFoundError:
+                # Key doesn't exist, so it's not registered
+                print(f"{Fore.YELLOW}paxd:// URL protocol is not registered")
+                print(f"{Fore.BLUE}Nothing to unregister")
+                return True  # Not registered, so technically successful
+            
             # Check if running as admin
             if not is_admin():
                 print(f"{Fore.RED}Administrator privileges required to unregister URL protocol")
                 print(f"{Fore.YELLOW}Please run as administrator: paxd register-protocol --unregister")
                 return False
-
-            protocol_key = r"SOFTWARE\\Classes\\paxd"
             
             try:
                 # Delete the entire protocol key tree
@@ -2597,6 +2619,54 @@ class PaxD:
             print(f"{Fore.RED}Error unregistering protocol handler: {e}")
             return False
 
+    def check_protocol_status(self):
+        """Check if paxd:// URL protocol handler is registered."""
+        try:
+            import winreg
+            
+            protocol_key = r"SOFTWARE\\Classes\\paxd"
+            
+            try:
+                with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, protocol_key) as key:
+                    # Check if the command is set up correctly
+                    command_key = f"{protocol_key}\\shell\\open\\command"
+                    try:
+                        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, command_key) as cmd_key:
+                            command_value = winreg.QueryValue(cmd_key, "")
+                            print(f"{Fore.GREEN}✓ paxd:// URL protocol is registered")
+                            print(f"{Fore.BLUE}Handler command: {Fore.WHITE}{command_value}")
+                            
+                            # Check if the command points to the current PaxD installation
+                            current_paxd_path = os.path.abspath(__file__)
+                            current_python_path = sys.executable
+                            expected_command = f'"{current_python_path}" "{current_paxd_path}" url "%1"'
+                            
+                            if command_value == expected_command:
+                                print(f"{Fore.GREEN}✓ Handler points to current PaxD installation")
+                            else:
+                                print(f"{Fore.YELLOW}⚠ Handler points to different PaxD installation")
+                                print(f"{Fore.BLUE}Expected: {Fore.WHITE}{expected_command}")
+                                print(f"{Fore.BLUE}Actual:   {Fore.WHITE}{command_value}")
+                                print(f"{Fore.YELLOW}Consider running 'paxd register-protocol' to update")
+                            
+                            return True
+                    except FileNotFoundError:
+                        print(f"{Fore.YELLOW}⚠ Protocol key exists but command handler is missing")
+                        print(f"{Fore.BLUE}Run 'paxd register-protocol' to fix")
+                        return False
+                        
+            except FileNotFoundError:
+                print(f"{Fore.RED}✗ paxd:// URL protocol is not registered")
+                print(f"{Fore.BLUE}Run 'paxd register-protocol' to register it")
+                return False
+                
+        except ImportError:
+            print(f"{Fore.RED}winreg module not available (non-Windows system?)")
+            return False
+        except Exception as e:
+            print(f"{Fore.RED}Error checking protocol handler: {e}")
+            return False
+
 PaxD()._verbose_print("IMPORTANT: please ignore the numbers stated at the left side of each log key! They are purely to make sorting easier for our bug trackers systems. They are lexicographic for a reason! (because our bug tracker can only read lexicographic ordering for some reason lol)", mode=2)
 
 import datetime
@@ -2618,6 +2688,7 @@ def create_argument_parser():
   paxd search term               Search for packages
   paxd info package-name         Show package details
   paxd register-protocol         Register paxd:// URL handler
+  paxd check-protocol            Check URL handler status
   paxd url "paxd://install/pkg"  Process a paxd:// URL
   paxd --verbose install pkg     Install with verbose output
         """
@@ -2819,6 +2890,13 @@ def create_argument_parser():
         '--unregister',
         action='store_true',
         help='Unregister the protocol handler instead of registering it'
+    )
+    
+    # Check-protocol command
+    subparsers.add_parser(
+        'check-protocol',
+        help='Check paxd:// URL protocol registration status',
+        description='Check if PaxD is registered as the handler for paxd:// URLs'
     )
     
     # Init command
@@ -3227,6 +3305,9 @@ def main():
             else:
                 paxd._verbose_print("Registering paxd:// protocol")
                 paxd.register_protocol()
+        elif args.command == "check-protocol":
+            paxd._verbose_print("Checking paxd:// protocol registration")
+            paxd.check_protocol_status()
 
         else:
             paxd._verbose_print(f"Unknown command: {args.command}")
