@@ -9,29 +9,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Smooth scrolling for navigation links
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-        anchor.addEventListener('click', function (e) {
-            const href = this.getAttribute('href');
-            const target = document.querySelector(href);
-            
-            if (target) {
-                e.preventDefault();
-                const headerOffset = 80;
-                const elementPosition = target.getBoundingClientRect().top;
-                const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
-                
-                // Update URL hash
-                history.pushState(null, null, href);
-                
-                window.scrollTo({
-                    top: offsetPosition,
-                    behavior: 'smooth'
-                });
-            }
-            // If target doesn't exist, let the default behavior happen
-        });
-    });
+    // Let anchor links work with default browser behavior
+    // Removed custom smooth scrolling to allow # links to work properly
     
     // Active navigation highlighting
     const sections = document.querySelectorAll('section[id]');
