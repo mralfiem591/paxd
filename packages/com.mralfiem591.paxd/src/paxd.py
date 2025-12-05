@@ -2439,7 +2439,7 @@ class PaxD:
         os.system('cls')
         print(f"{Fore.YELLOW}Warning: You have opened a link to preform the command '{Fore.CYAN}{action}{Fore.YELLOW}' using the paxd:// protocol.")
         print(f"{Fore.YELLOW}Ensure you trust the source of this link before proceeding.")
-        if input("\nWould you like to continue? (y/n): ").strip().lower() != 'y':
+        if input("\nWould you like to continue? (Y/n): ").strip().lower() == 'n':
             print(f"{Fore.RED}Action '{action}' cancelled by user.")
             exit(0)
 
@@ -2489,6 +2489,7 @@ class PaxD:
                 package_name = params.split('?')[0]
                 print(f"{Fore.BLUE}Showing info for package from URL: {Fore.CYAN}{package_name}")
                 self.info(package_name)
+                input("Press Enter to continue...")
                 
             elif action == "search":
                 if not params:
@@ -2497,6 +2498,7 @@ class PaxD:
                 search_term = params.split('?')[0]
                 print(f"{Fore.BLUE}Searching from URL: {Fore.CYAN}{search_term}")
                 self.search(search_term)
+                input("Press Enter to continue...")
                 
             elif action == "update":
                 if params:
