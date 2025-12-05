@@ -23,7 +23,7 @@ install:
       - com.mralfiem591.paxd-sdk
       - com.mralfiem591.paxd
   
-  firstrun: false
+  firstrun: true
   updaterun: false
   main_executable: paxd_gui.py
   command_alias: paxd-gui

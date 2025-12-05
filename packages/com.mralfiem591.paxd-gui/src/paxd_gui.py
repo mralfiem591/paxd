@@ -1172,6 +1172,18 @@ class PaxDGUI:
         status_bar = ttk.Label(self.root, textvariable=self.status_var, relief=tk.SUNKEN)
         status_bar.grid(row=3, column=0, columnspan=2, sticky="ew")
         
+        # If a .FIRSTRUN file exists, show welcome message
+        if os.path.exists(os.path.join(os.path.dirname(__file__), '.FIRSTRUN')):
+            messagebox.showinfo(
+                "Welcome to PaxD GUI!",
+                "Thank you for installing PaxD GUI!\n\n"
+                "This application allows you to manage PaxD packages with an easy-to-use graphical interface.\n\n"
+                "To get started, use the package list on the left to browse and select packages.\n\n"
+                "Enjoy using PaxD GUI!\n\n    - mralfiem591 :)"
+            )
+            # Remove the .FIRSTRUN file after showing the message
+            os.remove(os.path.join(os.path.dirname(__file__), '.FIRSTRUN'))
+        
     def load_packages(self):
         """Load packages from search index"""
         def load_in_thread():
