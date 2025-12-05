@@ -7,7 +7,7 @@
     },
     "credit": {
         "maintainer": "mralfiem591",
-        "backend": "Git, GitHub API",
-        "frontend": "GitHub"
+        "backend": "Git, GH API, mralfiem591",
+        "frontend": "GitHub, mralfiem591"
     }
 }
