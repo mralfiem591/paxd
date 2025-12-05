@@ -2434,6 +2434,156 @@ class PaxD:
 
         print(f"\n{Fore.GREEN}All package imports completed.")
 
+    def handle_url(self, url: str):
+        """Handle paxd:// protocol URLs for package operations."""
+        try:
+            # Parse the URL
+            if not url.startswith("paxd://"):
+                print(f"{Fore.RED}Invalid URL scheme. Expected paxd://, got: {url}")
+                return
+
+            # Remove the protocol prefix
+            url_content = url[7:]  # Remove "paxd://"
+            
+            # Split into action and parameters
+            if '/' in url_content:
+                action, params = url_content.split('/', 1)
+            else:
+                action = url_content
+                params = ""
+
+            self._verbose_print(f"Processing URL action: {action}, params: {params}")
+
+            if action == "install":
+                if not params:
+                    print(f"{Fore.RED}Package name required for install action")
+                    return
+                # Handle install with optional parameters (e.g., paxd://install/package-name?skip-checksum=true)
+                package_name = params.split('?')[0]  # Remove query parameters for now
+                print(f"{Fore.BLUE}Installing package from URL: {Fore.CYAN}{package_name}")
+                self.install(package_name, user_requested=True)
+                
+            elif action == "uninstall":
+                if not params:
+                    print(f"{Fore.RED}Package name required for uninstall action")
+                    return
+                package_name = params.split('?')[0]
+                print(f"{Fore.BLUE}Uninstalling package from URL: {Fore.CYAN}{package_name}")
+                self.uninstall(package_name)
+                
+            elif action == "info":
+                if not params:
+                    print(f"{Fore.RED}Package name required for info action")
+                    return
+                package_name = params.split('?')[0]
+                print(f"{Fore.BLUE}Showing info for package from URL: {Fore.CYAN}{package_name}")
+                self.info(package_name)
+                
+            elif action == "search":
+                if not params:
+                    print(f"{Fore.RED}Search term required for search action")
+                    return
+                search_term = params.split('?')[0]
+                print(f"{Fore.BLUE}Searching from URL: {Fore.CYAN}{search_term}")
+                self.search(search_term)
+                
+            elif action == "update":
+                if params:
+                    package_name = params.split('?')[0]
+                    print(f"{Fore.BLUE}Updating package from URL: {Fore.CYAN}{package_name}")
+                    self.update(package_name)
+                else:
+                    print(f"{Fore.BLUE}Updating all packages from URL")
+                    self.update_all()
+                    
+            else:
+                print(f"{Fore.RED}Unknown URL action: {action}")
+                print(f"{Fore.YELLOW}Supported actions: install, uninstall, info, search, update")
+
+        except Exception as e:
+            print(f"{Fore.RED}Error processing URL {url}: {e}")
+            self._verbose_print(f"URL processing error details: {e}")
+
+    def register_protocol(self):
+        """Register paxd:// URL protocol handler in Windows registry."""
+        try:
+            import winreg
+            
+            # Check if running as admin
+            if not is_admin():
+                print(f"{Fore.RED}Administrator privileges required to register URL protocol")
+                print(f"{Fore.YELLOW}Please run as administrator: paxd register-protocol")
+                return False
+
+            # Get the path to paxd executable
+            paxd_path = os.path.abspath(__file__)
+            python_path = sys.executable
+            
+            # Create the registry entries
+            protocol_key = r"SOFTWARE\\Classes\\paxd"
+            
+            # Create main protocol key
+            with winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, protocol_key) as key:
+                winreg.SetValue(key, "", winreg.REG_SZ, "PaxD Package Manager Protocol")
+                winreg.SetValueEx(key, "URL Protocol", 0, winreg.REG_SZ, "")
+            
+            # Create DefaultIcon key
+            with winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, f"{protocol_key}\\DefaultIcon") as key:
+                # Use Python executable icon as default
+                winreg.SetValue(key, "", winreg.REG_SZ, f'"{python_path}",0')
+            
+            # Create shell\\open\\command key
+            with winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, f"{protocol_key}\\shell\\open\\command") as key:
+                # Command to execute when URL is clicked: "python" "paxd.py" url "%1"
+                command = f'"{python_path}" "{paxd_path}" url "%1"'
+                winreg.SetValue(key, "", winreg.REG_SZ, command)
+                
+            print(f"{Fore.GREEN}Successfully registered paxd:// URL protocol handler!")
+            print(f"{Fore.BLUE}You can now use URLs like: paxd://install/package-name")
+            return True
+            
+        except ImportError:
+            print(f"{Fore.RED}winreg module not available (non-Windows system?)")
+            return False
+        except Exception as e:
+            print(f"{Fore.RED}Error registering protocol handler: {e}")
+            return False
+
+    def unregister_protocol(self):
+        """Unregister paxd:// URL protocol handler from Windows registry."""
+        try:
+            import winreg
+            
+            # Check if running as admin
+            if not is_admin():
+                print(f"{Fore.RED}Administrator privileges required to unregister URL protocol")
+                print(f"{Fore.YELLOW}Please run as administrator: paxd register-protocol --unregister")
+                return False
+
+            protocol_key = r"SOFTWARE\\Classes\\paxd"
+            
+            try:
+                # Delete the entire protocol key tree
+                winreg.DeleteKey(winreg.HKEY_LOCAL_MACHINE, f"{protocol_key}\\shell\\open\\command")
+                winreg.DeleteKey(winreg.HKEY_LOCAL_MACHINE, f"{protocol_key}\\shell\\open")
+                winreg.DeleteKey(winreg.HKEY_LOCAL_MACHINE, f"{protocol_key}\\shell")
+                winreg.DeleteKey(winreg.HKEY_LOCAL_MACHINE, f"{protocol_key}\\DefaultIcon")
+                winreg.DeleteKey(winreg.HKEY_LOCAL_MACHINE, protocol_key)
+                
+                print(f"{Fore.GREEN}Successfully unregistered paxd:// URL protocol handler!")
+                return True
+                
+            except FileNotFoundError:
+                print(f"{Fore.YELLOW}Protocol handler was not registered")
+                return True
+                
+        except ImportError:
+            print(f"{Fore.RED}winreg module not available (non-Windows system?)")
+            return False
+        except Exception as e:
+            print(f"{Fore.RED}Error unregistering protocol handler: {e}")
+            return False
+
 PaxD()._verbose_print("IMPORTANT: please ignore the numbers stated at the left side of each log key! They are purely to make sorting easier for our bug trackers systems. They are lexicographic for a reason! (because our bug tracker can only read lexicographic ordering for some reason lol)", mode=2)
 
 import datetime
@@ -2454,6 +2604,8 @@ def create_argument_parser():
   paxd update package-name       Update a specific package
   paxd search term               Search for packages
   paxd info package-name         Show package details
+  paxd register-protocol         Register paxd:// URL handler
+  paxd url "paxd://install/pkg"  Process a paxd:// URL
   paxd --verbose install pkg     Install with verbose output
         """
     )
@@ -2633,6 +2785,29 @@ def create_argument_parser():
         description='Start the PaxD graphical user interface'
     )
     
+    # URL command
+    url_parser = subparsers.add_parser(
+        'url',
+        help='Handle paxd:// URLs',
+        description='Process paxd:// protocol URLs for package operations'
+    )
+    url_parser.add_argument(
+        'url',
+        help='The paxd:// URL to process'
+    )
+    
+    # Register-protocol command
+    register_parser = subparsers.add_parser(
+        'register-protocol',
+        help='Register paxd:// URL protocol handler',
+        description='Register PaxD as the handler for paxd:// URLs in Windows'
+    )
+    register_parser.add_argument(
+        '--unregister',
+        action='store_true',
+        help='Unregister the protocol handler instead of registering it'
+    )
+    
     # Init command
     init_parser = subparsers.add_parser(
         'init',
@@ -2799,11 +2974,20 @@ def main():
                     print(f"{Fore.GREEN}Pip dependencies installed successfully.")
         except Exception as e:
             print(f"{Fore.RED}Failed to install PaxD dependencies: {e}")
-        # 6. Delete the .FIRSTRUN file
+            
+        # 6. Register paxd:// URL protocol (requires admin rights, so optional)
+        print("Registering paxd:// URL protocol...")
+        if paxd.register_protocol():
+            print(f"{Fore.GREEN}URL protocol registered successfully!")
+        else:
+            print(f"{Fore.YELLOW}URL protocol registration skipped (requires admin rights)")
+            print(f"{Fore.YELLOW}You can register it later with: paxd register-protocol")
+            
+        # 7. Delete the .FIRSTRUN file
         if os.path.exists(os.path.join(os.path.dirname(__file__), ".FIRSTRUN")):
             os.remove(os.path.join(os.path.dirname(__file__), ".FIRSTRUN"))
         print(f"{Fore.GREEN}PaxD first time run initialization complete.")
-        print(f"\n{Fore.CYAN}Welcome to PaxD!{Style.RESET_ALL}\nIt is recommended you try out PaxD with our {Fore.YELLOW}paxd-test{Style.RESET_ALL} package - install it with {Fore.GREEN}`paxd install paxd-test`{Style.RESET_ALL}, and run paxd-test to see it in action!\n\nYou can uninstall it later with {Fore.RED}`paxd uninstall paxd-test`{Style.RESET_ALL}.\n")
+        print(f"\n{Fore.CYAN}Welcome to PaxD!{Style.RESET_ALL}\nIt is recommended you try out PaxD with our {Fore.YELLOW}paxd-test{Style.RESET_ALL} package - install it with {Fore.GREEN}`paxd install paxd-test`{Style.RESET_ALL}, and run paxd-test to see it in action!\n\nYou can uninstall it later with {Fore.RED}`paxd uninstall paxd-test`{Style.RESET_ALL}.\n\nRecommended next step: register paxd:// urls with {Fore.GREEN}`paxd register-protocol`{Style.RESET_ALL} (requires admin rights)\n")
         exit(0)
         
     # Check version file and user-installed file in case they were removed by the user
@@ -2996,12 +3180,21 @@ def main():
                         print(f"{Fore.GREEN}Pip dependencies installed successfully.")
             except Exception as e:
                 print(f"{Fore.RED}Failed to install PaxD dependencies: {e}")
-            # 6. Delete the .FIRSTRUN file
+                
+            # 6. Register paxd:// URL protocol (requires admin rights, so optional)
+            print("Registering paxd:// URL protocol...")
+            if paxd.register_protocol():
+                print(f"{Fore.GREEN}URL protocol registered successfully!")
+            else:
+                print(f"{Fore.YELLOW}URL protocol registration skipped (requires admin rights)")
+                print(f"{Fore.YELLOW}You can register it later with: paxd register-protocol")
+                
+            # 7. Delete the .FIRSTRUN file
             firstrun_file = os.path.join(os.path.dirname(__file__), ".FIRSTRUN")
             if os.path.exists(firstrun_file):
                 os.remove(firstrun_file)
             print(f"{Fore.GREEN}PaxD first time run initialization complete.")
-            print(f"\n{Fore.CYAN}Welcome to PaxD!{Style.RESET_ALL}\nIt is recommended you try out PaxD with our {Fore.YELLOW}paxd-test{Style.RESET_ALL} package - install it with {Fore.GREEN}`paxd install paxd-test`{Style.RESET_ALL}, and run paxd-test to see it in action!\n\nYou can uninstall it later with {Fore.RED}`paxd uninstall paxd-test`{Style.RESET_ALL}.\n")
+            print(f"\n{Fore.CYAN}Welcome to PaxD!{Style.RESET_ALL}\nIt is recommended you try out PaxD with our {Fore.YELLOW}paxd-test{Style.RESET_ALL} package - install it with {Fore.GREEN}`paxd install paxd-test`{Style.RESET_ALL}, and run paxd-test to see it in action!\n\nYou can uninstall it later with {Fore.RED}`paxd uninstall paxd-test`{Style.RESET_ALL}.\n\nRecommended next step: register paxd:// urls with {Fore.GREEN}`paxd register-protocol`{Style.RESET_ALL} (requires admin rights)\n")
             
         elif args.command == "gui":
             paxd._verbose_print("Launching PaxD GUI")
@@ -3011,6 +3204,16 @@ def main():
             except subprocess.CalledProcessError:
                 paxd.install("com.mralfiem591.paxd-gui", user_requested=True)
                 subprocess.run(['paxd-gui'], check=True, shell=True)        
+        elif args.command == "url":
+            paxd._verbose_print(f"Processing URL: {args.url}")
+            paxd.handle_url(args.url)
+        elif args.command == "register-protocol":
+            if args.unregister:
+                paxd._verbose_print("Unregistering paxd:// protocol")
+                paxd.unregister_protocol()
+            else:
+                paxd._verbose_print("Registering paxd:// protocol")
+                paxd.register_protocol()
 
         else:
             paxd._verbose_print(f"Unknown command: {args.command}")
