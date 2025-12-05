@@ -957,6 +957,7 @@ class PaxDGUI:
         self.load_packages()
         
         # If a .FIRSTRUN file exists, show welcome message
+        print(f"DEBUG: Checking for .FIRSTRUN file at {os.path.join(os.path.dirname(__file__), '.FIRSTRUN')}")
         if os.path.exists(os.path.join(os.path.dirname(__file__), '.FIRSTRUN')):
             messagebox.showinfo(
                 "Welcome to PaxD GUI!",
