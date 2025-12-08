@@ -2800,6 +2800,8 @@ def main():
     # Check for status messages
     try:
         repo = paxd._resolve_repository_url(paxd._read_repository_url())
+        if repo != "https://raw.githubusercontent.com/mralfiem591/paxd/refs/heads/main":
+            print(f"{Fore.YELLOW}Warning: You are using a custom repository: {repo}. PaxD cannot guarantee the authenticity or safety of packages from this source. {Style.BRIGHT}Proceed with caution!{Style.RESET_ALL}")
         status = requests.get(f"{repo}/status", headers=paxd.headers, allow_redirects=True)
         status.raise_for_status()
 
