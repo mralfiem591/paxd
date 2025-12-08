@@ -682,7 +682,7 @@ class PaxD:
             except PackageNotFoundError as e:
                 self._verbose_print(f"Metapackage not found: {e}")
                 self._verbose_timing_end(f"install {package_name}")
-                print(f"{Fore.RED}✗ {e}")
+                print(f"{Fore.RED}X {e}")
                 print(f"{Fore.YELLOW}Try using '{Fore.CYAN}paxd search {package_name[:-5] if package_name.endswith('.meta') else package_name}{Fore.YELLOW}' to find similar packages.")
                 return
             
@@ -715,7 +715,7 @@ class PaxD:
                         installed_packages.append(pkg)
                 except PackageNotFoundError:
                     self._verbose_print(f"Package {pkg} from metapackage not found in repository")
-                    print(f"{Fore.RED}✗ Package '{Fore.YELLOW}{pkg}{Fore.RED}' from metapackage was not found in the repository.")
+                    print(f"{Fore.RED}X Package '{Fore.YELLOW}{pkg}{Fore.RED}' from metapackage was not found in the repository.")
                     failed_packages.append(pkg)
                 except Exception as e:
                     self._verbose_print(f"Failed to install package {pkg} from metapackage: {e}")
@@ -749,7 +749,7 @@ class PaxD:
             # Report results
             total_packages = installed_packages + already_installed_packages
             if total_packages:
-                print(f"\n{Fore.GREEN}✓ Metapackage {Fore.YELLOW}{package_name}{Fore.GREEN} processed successfully!")
+                print(f"\n{Fore.GREEN}> Metapackage {Fore.YELLOW}{package_name}{Fore.GREEN} processed successfully!")
                 if installed_packages:
                     print(f"{Fore.GREEN}Newly installed: {Fore.CYAN}{', '.join(installed_packages)}")
                 if already_installed_packages:
@@ -834,7 +834,7 @@ class PaxD:
         try:
             package_data, source_file = self._fetch_package_metadata(repo_url, package_name)
         except PackageNotFoundError:
-            print(f"{Fore.RED}✗ Package '{Fore.YELLOW}{package_name}{Fore.RED}' was not found in the repository.")
+            print(f"{Fore.RED}X Package '{Fore.YELLOW}{package_name}{Fore.RED}' was not found in the repository.")
             print(f"{Fore.YELLOW}Try using '{Fore.CYAN}paxd search {package_name}{Fore.YELLOW}' to find similar packages.")
             return
         self._verbose_print(f"Successfully fetched metadata from {source_file}")
@@ -894,7 +894,7 @@ class PaxD:
                         self._mark_as_dependency(paxd_package, package_name)
                         self._verbose_print(f"Marked {paxd_package} as dependency of {package_name}")
                     except PackageNotFoundError:
-                        print(f"{Fore.RED}✗ Dependency '{Fore.YELLOW}{paxd_package}{Fore.RED}' was not found in the repository.")
+                        print(f"{Fore.RED}X Dependency '{Fore.YELLOW}{paxd_package}{Fore.RED}' was not found in the repository.")
                         print(f"{Fore.YELLOW}Continuing installation, but this may cause issues...")
                 else:
                     self._verbose_print(f"Unknown dependency type: {dep}")
@@ -1022,7 +1022,7 @@ class PaxD:
             self._verbose_print("Package installed as dependency, not marking as user-installed")
         
         self._verbose_timing_end(f"install {package_name}")
-        print(f"{Fore.GREEN}✓ Installed version {Fore.CYAN}{installed_version}{Fore.GREEN} of '{pkg_name_friendly}'{Style.RESET_ALL}")
+        print(f"{Fore.GREEN}> Installed version {Fore.CYAN}{installed_version}{Fore.GREEN} of '{pkg_name_friendly}'{Style.RESET_ALL}")
         if mainfile:
             print(f"{Fore.YELLOW}Easily run it with '{Fore.GREEN}{alias if alias else mainfile.split('.')[0]}{Fore.YELLOW}' in your shell.")
     
@@ -1050,7 +1050,7 @@ class PaxD:
             except PackageNotFoundError as e:
                 self._verbose_print(f"Metapackage not found: {e}")
                 self._verbose_timing_end(f"uninstall {package_name}")
-                print(f"{Fore.RED}✗ {e}")
+                print(f"{Fore.RED}X {e}")
                 print(f"{Fore.YELLOW}Note: You can still check for locally installed packages from this metapackage.")
                 return
             
@@ -1130,7 +1130,7 @@ class PaxD:
             
             # Report results
             if uninstalled_packages:
-                print(f"\n{Fore.GREEN}✓ Metapackage {Fore.YELLOW}{package_name}{Fore.GREEN} processed successfully!")
+                print(f"\n{Fore.GREEN}> Metapackage {Fore.YELLOW}{package_name}{Fore.GREEN} processed successfully!")
                 print(f"{Fore.GREEN}Uninstalled packages: {Fore.CYAN}{', '.join(uninstalled_packages)}")
             
             if skipped_packages:
@@ -1170,7 +1170,7 @@ class PaxD:
         try:
             package_data, source_file = self._fetch_package_metadata(repo_url, package_name)
         except PackageNotFoundError:
-            print(f"{Fore.RED}✗ Package '{Fore.YELLOW}{package_name}{Fore.RED}' was not found in the repository.")
+            print(f"{Fore.RED}X Package '{Fore.YELLOW}{package_name}{Fore.RED}' was not found in the repository.")
             print(f"{Fore.YELLOW}Note: You can still uninstall locally if the package folder exists.")
             return
         self._verbose_print(f"Successfully fetched metadata from {source_file}")
@@ -1222,7 +1222,7 @@ class PaxD:
             shutil.rmtree(package_folder, onerror=permission_handler)
             # Check package folder is deleted
             if not os.path.exists(package_folder):
-                print(f"{Fore.GREEN}✓ Successfully uninstalled '{Fore.CYAN}{package_name}{Fore.GREEN}' - deleted package folder {package_folder}")
+                print(f"{Fore.GREEN}> Successfully uninstalled '{Fore.CYAN}{package_name}{Fore.GREEN}' - deleted package folder {package_folder}")
                 self._verbose_print(f"Successfully uninstalled package: {package_name}")
             else:
                 print(f"{Fore.RED}Failed to delete package folder {package_folder}")
@@ -1260,7 +1260,7 @@ class PaxD:
             except PackageNotFoundError as e:
                 self._verbose_print(f"Metapackage not found: {e}")
                 self._verbose_timing_end(f"update {package_name}")
-                print(f"{Fore.RED}✗ {e}")
+                print(f"{Fore.RED}X {e}")
                 print(f"{Fore.YELLOW}Cannot update a metapackage that doesn't exist in the repository.")
                 return
             
@@ -1287,7 +1287,7 @@ class PaxD:
             
             # Report results
             if updated_packages:
-                print(f"\n{Fore.GREEN}✓ Metapackage {Fore.YELLOW}{package_name}{Fore.GREEN} updated successfully!")
+                print(f"\n{Fore.GREEN}> Metapackage {Fore.YELLOW}{package_name}{Fore.GREEN} updated successfully!")
                 print(f"{Fore.GREEN}Updated packages: {Fore.CYAN}{', '.join(updated_packages)}")
             
             if failed_packages:
@@ -1335,7 +1335,7 @@ class PaxD:
         try:
             package_data, source_file = self._fetch_package_metadata(repo_url, package_name)
         except PackageNotFoundError:
-            print(f"{Fore.RED}✗ Package '{Fore.YELLOW}{package_name}{Fore.RED}' was not found in the repository.")
+            print(f"{Fore.RED}X Package '{Fore.YELLOW}{package_name}{Fore.RED}' was not found in the repository.")
             print(f"{Fore.YELLOW}Cannot update a package that doesn't exist in the repository.")
             return
         self._verbose_print(f"Successfully fetched metadata from {source_file}")
@@ -1397,7 +1397,7 @@ class PaxD:
                             # Mark this package as a dependency
                             self._mark_as_dependency(paxd_package, package_name)
                     except PackageNotFoundError:
-                        print(f"{Fore.RED}✗ Dependency '{Fore.YELLOW}{paxd_package}{Fore.RED}' was not found in the repository.")
+                        print(f"{Fore.RED}X Dependency '{Fore.YELLOW}{paxd_package}{Fore.RED}' was not found in the repository.")
                         print(f"{Fore.YELLOW}Continuing update, but this may cause issues...")
                 else:
                     print(f"Unknown dependency type for '{dep}'")
@@ -1519,7 +1519,7 @@ class PaxD:
                 f.write(f'"{sys.executable}" "{os.path.join(local_app_data, "com.mralfiem591.paxd", "run_pkg.py")}" "{os.path.join(local_app_data, package_name, mainfile)}" %*\n')
             print(f"Updated batch file at {bat_file_path}")
         
-        print(f"{Fore.GREEN}✓ Successfully updated '{pkg_name_friendly}' to version {Fore.CYAN}{latest_version}{Style.RESET_ALL}")
+        print(f"{Fore.GREEN}> Successfully updated '{pkg_name_friendly}' to version {Fore.CYAN}{latest_version}{Style.RESET_ALL}")
         if updated_files:
             print(f"{Fore.BLUE}Updated files: {Fore.WHITE}{', '.join(updated_files)}")
         if excluded_files:
@@ -1596,7 +1596,7 @@ class PaxD:
         try:
             package_data, source_file = self._fetch_package_metadata(repo_url, package_name)
         except PackageNotFoundError:
-            print(f"{Fore.RED}✗ Package '{Fore.YELLOW}{package_name}{Fore.RED}' was not found in the repository.")
+            print(f"{Fore.RED}X Package '{Fore.YELLOW}{package_name}{Fore.RED}' was not found in the repository.")
             print(f"{Fore.YELLOW}Try using '{Fore.CYAN}paxd search {package_name}{Fore.YELLOW}' to find similar packages.")
             return
         self._verbose_print(f"Successfully fetched metadata from {source_file}")
