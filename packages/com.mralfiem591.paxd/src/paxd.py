@@ -80,6 +80,10 @@ class LexicographicConversionError(Exception):
     """Custom exception for lexicographic conversion errors."""
     pass
 
+class PackageNotFoundError(Exception):
+    """Custom exception for when a package cannot be found in the repository."""
+    pass
+
 def find_sdk():
     import sys, importlib.abc, importlib.util
 
@@ -571,14 +575,14 @@ class PaxD:
         
         if package_response.status_code == 404:
             # Package not found - provide a user-friendly error
-            print(f"Package '{package_name}' not found in repository")
-            raise FileNotFoundError(f"Package '{package_name}' not found in repository")
+            self._verbose_print(f"Package '{package_name}' not found (404)")
+            raise PackageNotFoundError(f"Package '{package_name}' not found in repository")
         else:
             # Other HTTP error - raise the original error for debugging
             package_response.raise_for_status()
         
         # This shouldn't be reached, but just in case
-        raise FileNotFoundError(f"Could not find package metadata for {package_name}")
+        raise PackageNotFoundError(f"Could not find package metadata for {package_name}")
 
     def _is_metapackage(self, package_name):
         """Check if a package name refers to a metapackage."""
@@ -611,8 +615,12 @@ class PaxD:
                 meta_response.raise_for_status()
         except Exception as e:
             self._verbose_print(f"Failed to fetch metapackage file: {e}")
-            print(f"Metapackage '{metapackage_name}' not found in repository")
-            raise FileNotFoundError(f"Metapackage '{metapackage_name}' not found in repository")
+            # Check if it's a requests HTTPError with 404 status
+            if isinstance(e, requests.HTTPError) and hasattr(e, 'response') and e.response.status_code == 404:
+                self._verbose_print(f"Metapackage '{metapackage_name}' not found (404)")
+            else:
+                self._verbose_print(f"Other error fetching metapackage: {e}")
+            raise PackageNotFoundError(f"Metapackage '{metapackage_name}' not found in repository")
         
         # This line should never be reached due to raise_for_status() or the exception
         return []
@@ -671,10 +679,11 @@ class PaxD:
             # Fetch the list of packages from the metapackage
             try:
                 package_list = self._fetch_metapackage_data(repo_url, package_name)
-            except FileNotFoundError as e:
+            except PackageNotFoundError as e:
                 self._verbose_print(f"Metapackage not found: {e}")
                 self._verbose_timing_end(f"install {package_name}")
-                print(f"{Fore.RED}Error: {e}")
+                print(f"{Fore.RED}✗ {e}")
+                print(f"{Fore.YELLOW}Try using '{Fore.CYAN}paxd search {package_name[:-5] if package_name.endswith('.meta') else package_name}{Fore.YELLOW}' to find similar packages.")
                 return
             
             print(f"{Fore.GREEN}Metapackage contains {len(package_list)} packages:")
@@ -704,6 +713,10 @@ class PaxD:
                         already_installed_packages.append(pkg)
                     else:
                         installed_packages.append(pkg)
+                except PackageNotFoundError:
+                    self._verbose_print(f"Package {pkg} from metapackage not found in repository")
+                    print(f"{Fore.RED}✗ Package '{Fore.YELLOW}{pkg}{Fore.RED}' from metapackage was not found in the repository.")
+                    failed_packages.append(pkg)
                 except Exception as e:
                     self._verbose_print(f"Failed to install package {pkg} from metapackage: {e}")
                     print(f"{Fore.RED}Failed to install {Fore.YELLOW}{pkg}{Fore.RED}: {e}")
@@ -818,7 +831,12 @@ class PaxD:
         # Fetch package metadata
         self._verbose_print(f"Fetching package metadata for: {package_name}")
         print(f"{Fore.CYAN}Fetching metadata for package {Fore.YELLOW}{package_name}{Fore.CYAN}...")
-        package_data, source_file = self._fetch_package_metadata(repo_url, package_name)
+        try:
+            package_data, source_file = self._fetch_package_metadata(repo_url, package_name)
+        except PackageNotFoundError:
+            print(f"{Fore.RED}✗ Package '{Fore.YELLOW}{package_name}{Fore.RED}' was not found in the repository.")
+            print(f"{Fore.YELLOW}Try using '{Fore.CYAN}paxd search {package_name}{Fore.YELLOW}' to find similar packages.")
+            return
         self._verbose_print(f"Successfully fetched metadata from {source_file}")
         if source_file == "paxd.yaml":
             print(f"{Fore.GREEN}Found YAML package configuration, converted to paxd format")
@@ -870,10 +888,14 @@ class PaxD:
                     paxd_package = dep[len("paxd:"):]
                     self._verbose_print(f"Installing PaxD dependency package: {paxd_package}")
                     print(f"{Fore.CYAN}Installing PaxD package '{Fore.YELLOW}{paxd_package}{Fore.CYAN}' via PaxD")
-                    self.install(paxd_package, user_requested=False)
-                    # Mark this package as a dependency
-                    self._mark_as_dependency(paxd_package, package_name)
-                    self._verbose_print(f"Marked {paxd_package} as dependency of {package_name}")
+                    try:
+                        self.install(paxd_package, user_requested=False)
+                        # Mark this package as a dependency
+                        self._mark_as_dependency(paxd_package, package_name)
+                        self._verbose_print(f"Marked {paxd_package} as dependency of {package_name}")
+                    except PackageNotFoundError:
+                        print(f"{Fore.RED}✗ Dependency '{Fore.YELLOW}{paxd_package}{Fore.RED}' was not found in the repository.")
+                        print(f"{Fore.YELLOW}Continuing installation, but this may cause issues...")
                 else:
                     self._verbose_print(f"Unknown dependency type: {dep}")
                     print(f"Unknown dependency type for '{dep}'")
@@ -1025,10 +1047,11 @@ class PaxD:
             # Fetch the list of packages from the metapackage
             try:
                 package_list = self._fetch_metapackage_data(repo_url, package_name)
-            except FileNotFoundError as e:
+            except PackageNotFoundError as e:
                 self._verbose_print(f"Metapackage not found: {e}")
                 self._verbose_timing_end(f"uninstall {package_name}")
-                print(f"{Fore.RED}Error: {e}")
+                print(f"{Fore.RED}✗ {e}")
+                print(f"{Fore.YELLOW}Note: You can still check for locally installed packages from this metapackage.")
                 return
             
             print(f"{Fore.GREEN}Metapackage contains {len(package_list)} packages:")
@@ -1144,7 +1167,12 @@ class PaxD:
 
         # Fetch package metadata
         self._verbose_print(f"Fetching package metadata for uninstall: {package_name}")
-        package_data, source_file = self._fetch_package_metadata(repo_url, package_name)
+        try:
+            package_data, source_file = self._fetch_package_metadata(repo_url, package_name)
+        except PackageNotFoundError:
+            print(f"{Fore.RED}✗ Package '{Fore.YELLOW}{package_name}{Fore.RED}' was not found in the repository.")
+            print(f"{Fore.YELLOW}Note: You can still uninstall locally if the package folder exists.")
+            return
         self._verbose_print(f"Successfully fetched metadata from {source_file}")
         
         # Check if package is actually installed
@@ -1229,10 +1257,11 @@ class PaxD:
             # Fetch the list of packages from the metapackage
             try:
                 package_list = self._fetch_metapackage_data(repo_url, package_name)
-            except FileNotFoundError as e:
+            except PackageNotFoundError as e:
                 self._verbose_print(f"Metapackage not found: {e}")
                 self._verbose_timing_end(f"update {package_name}")
-                print(f"{Fore.RED}Error: {e}")
+                print(f"{Fore.RED}✗ {e}")
+                print(f"{Fore.YELLOW}Cannot update a metapackage that doesn't exist in the repository.")
                 return
             
             print(f"{Fore.GREEN}Metapackage contains {len(package_list)} packages:")
@@ -1303,7 +1332,12 @@ class PaxD:
         
         # Fetch latest package metadata
         self._verbose_print(f"Fetching latest package metadata for: {package_name}")
-        package_data, source_file = self._fetch_package_metadata(repo_url, package_name)
+        try:
+            package_data, source_file = self._fetch_package_metadata(repo_url, package_name)
+        except PackageNotFoundError:
+            print(f"{Fore.RED}✗ Package '{Fore.YELLOW}{package_name}{Fore.RED}' was not found in the repository.")
+            print(f"{Fore.YELLOW}Cannot update a package that doesn't exist in the repository.")
+            return
         self._verbose_print(f"Successfully fetched metadata from {source_file}")
         if source_file == "paxd.yaml":
             print(f"{Fore.GREEN}Using YAML package configuration")
@@ -1353,14 +1387,18 @@ class PaxD:
                 elif dep.startswith("paxd:"):
                     paxd_package = dep[len("paxd:"):]
                     paxd_dep_path = os.path.join(local_app_data, paxd_package)
-                    if os.path.exists(paxd_dep_path):
-                        print(f"Updating PaxD dependency '{paxd_package}'")
-                        self.update(paxd_package)
-                    else:
-                        print(f"Installing new PaxD dependency '{paxd_package}'")
-                        self.install(paxd_package, user_requested=False)
-                        # Mark this package as a dependency
-                        self._mark_as_dependency(paxd_package, package_name)
+                    try:
+                        if os.path.exists(paxd_dep_path):
+                            print(f"Updating PaxD dependency '{paxd_package}'")
+                            self.update(paxd_package)
+                        else:
+                            print(f"Installing new PaxD dependency '{paxd_package}'")
+                            self.install(paxd_package, user_requested=False)
+                            # Mark this package as a dependency
+                            self._mark_as_dependency(paxd_package, package_name)
+                    except PackageNotFoundError:
+                        print(f"{Fore.RED}✗ Dependency '{Fore.YELLOW}{paxd_package}{Fore.RED}' was not found in the repository.")
+                        print(f"{Fore.YELLOW}Continuing update, but this may cause issues...")
                 else:
                     print(f"Unknown dependency type for '{dep}'")
             except Exception as e:
@@ -1555,7 +1593,12 @@ class PaxD:
         
         # Fetch package metadata (try both paxd and paxd.yaml)
         self._verbose_print(f"Fetching package metadata for info: {package_name}")
-        package_data, source_file = self._fetch_package_metadata(repo_url, package_name)
+        try:
+            package_data, source_file = self._fetch_package_metadata(repo_url, package_name)
+        except PackageNotFoundError:
+            print(f"{Fore.RED}✗ Package '{Fore.YELLOW}{package_name}{Fore.RED}' was not found in the repository.")
+            print(f"{Fore.YELLOW}Try using '{Fore.CYAN}paxd search {package_name}{Fore.YELLOW}' to find similar packages.")
+            return
         self._verbose_print(f"Successfully fetched metadata from {source_file}")
         if source_file == "paxd.yaml":
             print(f"{Fore.GREEN}Package uses YAML configuration format")
