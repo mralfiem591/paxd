@@ -571,6 +571,7 @@ class PaxD:
         
         if package_response.status_code == 404:
             # Package not found - provide a user-friendly error
+            print(f"Package '{package_name}' not found in repository")
             raise FileNotFoundError(f"Package '{package_name}' not found in repository")
         else:
             # Other HTTP error - raise the original error for debugging
@@ -610,6 +611,7 @@ class PaxD:
                 meta_response.raise_for_status()
         except Exception as e:
             self._verbose_print(f"Failed to fetch metapackage file: {e}")
+            print(f"Metapackage '{metapackage_name}' not found in repository")
             raise FileNotFoundError(f"Metapackage '{metapackage_name}' not found in repository")
         
         # This line should never be reached due to raise_for_status() or the exception
