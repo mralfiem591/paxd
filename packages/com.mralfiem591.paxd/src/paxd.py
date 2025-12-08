@@ -625,417 +625,382 @@ class PaxD:
         self._verbose_timing_start(f"install {package_name}")
         self._verbose_print(f"Installing package: {package_name} (user_requested={user_requested})")
         
-        try:
-            # Read and resolve repository URL
-            self._verbose_print("Reading and resolving repository URL")
-            repo_url = self._read_repository_url()
-            repo_url = self._resolve_repository_url(repo_url)
-            local_app_data = os.path.join(os.path.expandvars(r"%LOCALAPPDATA%"), "PaxD")
-            self._verbose_print(f"Local app data directory: {local_app_data}")
-            
-            # GET {repo_url}/paxd - this validates that the URL is a valid paxd repo
-            paxd_url = f"{repo_url}/paxd"
-            self._verbose_print(f"Validating repository at: {paxd_url}")
-            response = requests.get(paxd_url, headers=self.headers, allow_redirects=True)  # type: ignore
-            self._verbose_print(f"GET {paxd_url}: {response.status_code}")
-            self._verbose_print(f"Repository validation response: {response.status_code}")
-            
-            # if the response contains a repo_info dict, it's a valid repo, otherwise, invalid
-            if response.status_code == 200:
-                try:
-                    self._verbose_print("Parsing repository info")
-                    repo_data = parse_jsonc(response.text)
-                    if "repo_info" in repo_data:
-                        repo_name = repo_data.get('repo_info', {}).get('repo_name', 'Unknown')
-                        self._verbose_print(f"Valid repository found: {repo_name}")
-                        print(f"{Fore.GREEN}Valid PaxD repository found at {Fore.CYAN}{repo_url}")
-                    else:
-                        self._verbose_print("Invalid repository: no repo_info found")
-                        print(f"{Fore.RED}Invalid PaxD repository at {Fore.CYAN}{repo_url}")
-                        raise ValueError("Invalid PaxD repository")
-                except json.JSONDecodeError as e:
-                    self._verbose_print(f"JSON decode error validating repository: {e}")
-                    print(f"Invalid JSON response from repository: {e}")
+        # Read and resolve repository URL
+        self._verbose_print("Reading and resolving repository URL")
+        repo_url = self._read_repository_url()
+        repo_url = self._resolve_repository_url(repo_url)
+        local_app_data = os.path.join(os.path.expandvars(r"%LOCALAPPDATA%"), "PaxD")
+        self._verbose_print(f"Local app data directory: {local_app_data}")
+        
+        # GET {repo_url}/paxd - this validates that the URL is a valid paxd repo
+        paxd_url = f"{repo_url}/paxd"
+        self._verbose_print(f"Validating repository at: {paxd_url}")
+        response = requests.get(paxd_url, headers=self.headers, allow_redirects=True)  # type: ignore
+        self._verbose_print(f"GET {paxd_url}: {response.status_code}")
+        self._verbose_print(f"Repository validation response: {response.status_code}")
+        
+        # if the response contains a repo_info dict, it's a valid repo, otherwise, invalid
+        if response.status_code == 200:
+            try:
+                self._verbose_print("Parsing repository info")
+                repo_data = parse_jsonc(response.text)
+                if "repo_info" in repo_data:
+                    repo_name = repo_data.get('repo_info', {}).get('repo_name', 'Unknown')
+                    self._verbose_print(f"Valid repository found: {repo_name}")
+                    print(f"{Fore.GREEN}Valid PaxD repository found at {Fore.CYAN}{repo_url}")
+                else:
+                    self._verbose_print("Invalid repository: no repo_info found")
+                    print(f"{Fore.RED}Invalid PaxD repository at {Fore.CYAN}{repo_url}")
                     raise ValueError("Invalid PaxD repository")
-            else:
-                self._verbose_print(f"Repository validation failed with status {response.status_code}")
-                print(f"Invalid PaxD repository at {repo_url}")
+            except json.JSONDecodeError as e:
+                self._verbose_print(f"JSON decode error validating repository: {e}")
+                print(f"Invalid JSON response from repository: {e}")
                 raise ValueError("Invalid PaxD repository")
+        else:
+            self._verbose_print(f"Repository validation failed with status {response.status_code}")
+            print(f"Invalid PaxD repository at {repo_url}")
+            raise ValueError("Invalid PaxD repository")
 
-            # Check if this is a metapackage
-            if self._is_metapackage(package_name):
-                self._verbose_print(f"Detected metapackage: {package_name}")
-                print(f"{Fore.CYAN}Installing metapackage {Fore.YELLOW}{package_name}{Fore.CYAN}...")
-                
-                # Fetch the list of packages from the metapackage
-                try:
-                    package_list = self._fetch_metapackage_data(repo_url, package_name)
-                except FileNotFoundError as e:
-                    self._verbose_print(f"Metapackage not found: {e}")
-                    self._verbose_timing_end(f"install {package_name}")
-                    print(f"{Fore.RED}Error: {e}")
-                    return
-                
-                print(f"{Fore.GREEN}Metapackage contains {len(package_list)} packages:")
-                for pkg in package_list:
-                    print(f"  - {Fore.CYAN}{pkg}")
-                print()
-                
-                # Install each package in the metapackage
-                installed_packages = []
-                failed_packages = []
-                already_installed_packages = []  # Track packages that already existed
-                
-                for pkg in package_list:
-                    try:
-                        print(f"{Fore.BLUE}Installing package {Fore.YELLOW}{pkg}{Fore.BLUE} from metapackage...")
-                        
-                        # Check if package already exists before installing
-                        pkg_path = os.path.join(local_app_data, pkg)
-                        already_existed = os.path.exists(pkg_path)
-                        
-                        # For metapackages, we install each package as a dependency (user_requested=False)
-                        # This ensures that existing dependencies are not converted to user-installed
-                        # and that new packages are installed as dependencies, not user packages
-                        self.install(pkg, user_requested=False, skip_checksum=skip_checksum)
-                        
-                        if already_existed:
-                            already_installed_packages.append(pkg)
-                        else:
-                            installed_packages.append(pkg)
-                    except Exception as e:
-                        self._verbose_print(f"Failed to install package {pkg} from metapackage: {e}")
-                        print(f"{Fore.RED}Failed to install {Fore.YELLOW}{pkg}{Fore.RED}: {e}")
-                        failed_packages.append(pkg)
-                
-                # If the metapackage was user-requested, we need to track which packages
-                # were installed as part of this metapackage for proper uninstall behavior
-                # Only track packages that were actually installed (not already existing)
-                if user_requested and installed_packages:
-                    # Create a tracking file for the metapackage installation
-                    metapackage_tracking_dir = os.path.join(local_app_data, ".metapackages")
-                    os.makedirs(metapackage_tracking_dir, exist_ok=True)
-                    
-                    # Remove .meta extension for tracking file name
-                    tracking_name = package_name[:-5] if package_name.endswith('.meta') else package_name
-                    tracking_file = os.path.join(metapackage_tracking_dir, f"{tracking_name}.installed")
-                    
-                    with open(tracking_file, 'w') as f:
-                        for pkg in installed_packages:  # Only newly installed packages
-                            f.write(f"{pkg}\n")
-                    self._verbose_print(f"Created metapackage tracking file: {tracking_file}")
-                    
-                    if already_installed_packages:
-                        print(f"{Fore.CYAN}Note: {len(already_installed_packages)} packages were already installed and won't be tracked for uninstall:")
-                        for pkg in already_installed_packages:
-                            print(f"  - {Fore.YELLOW}{pkg}{Fore.CYAN} (already existed)")
-                
+        # Check if this is a metapackage
+        if self._is_metapackage(package_name):
+            self._verbose_print(f"Detected metapackage: {package_name}")
+            print(f"{Fore.CYAN}Installing metapackage {Fore.YELLOW}{package_name}{Fore.CYAN}...")
+            
+            # Fetch the list of packages from the metapackage
+            try:
+                package_list = self._fetch_metapackage_data(repo_url, package_name)
+            except FileNotFoundError as e:
+                self._verbose_print(f"Metapackage not found: {e}")
                 self._verbose_timing_end(f"install {package_name}")
-                
-                # Report results
-                total_packages = installed_packages + already_installed_packages
-                if total_packages:
-                    print(f"\n{Fore.GREEN}✓ Metapackage {Fore.YELLOW}{package_name}{Fore.GREEN} processed successfully!")
-                    if installed_packages:
-                        print(f"{Fore.GREEN}Newly installed: {Fore.CYAN}{', '.join(installed_packages)}")
-                    if already_installed_packages:
-                        print(f"{Fore.BLUE}Already installed: {Fore.CYAN}{', '.join(already_installed_packages)}")
-                
-                if failed_packages:
-                    print(f"{Fore.RED}Failed to install: {Fore.YELLOW}{', '.join(failed_packages)}")
-                    
+                print(f"{Fore.RED}Error: {e}")
                 return
+            
+            print(f"{Fore.GREEN}Metapackage contains {len(package_list)} packages:")
+            for pkg in package_list:
+                print(f"  - {Fore.CYAN}{pkg}")
+            print()
+            
+            # Install each package in the metapackage
+            installed_packages = []
+            failed_packages = []
+            already_installed_packages = []  # Track packages that already existed
+            
+            for pkg in package_list:
+                try:
+                    print(f"{Fore.BLUE}Installing package {Fore.YELLOW}{pkg}{Fore.BLUE} from metapackage...")
+                    
+                    # Check if package already exists before installing
+                    pkg_path = os.path.join(local_app_data, pkg)
+                    already_existed = os.path.exists(pkg_path)
+                    
+                    # For metapackages, we install each package as a dependency (user_requested=False)
+                    # This ensures that existing dependencies are not converted to user-installed
+                    # and that new packages are installed as dependencies, not user packages
+                    self.install(pkg, user_requested=False, skip_checksum=skip_checksum)
+                    
+                    if already_existed:
+                        already_installed_packages.append(pkg)
+                    else:
+                        installed_packages.append(pkg)
+                except Exception as e:
+                    self._verbose_print(f"Failed to install package {pkg} from metapackage: {e}")
+                    print(f"{Fore.RED}Failed to install {Fore.YELLOW}{pkg}{Fore.RED}: {e}")
+                    failed_packages.append(pkg)
+            
+            # If the metapackage was user-requested, we need to track which packages
+            # were installed as part of this metapackage for proper uninstall behavior
+            # Only track packages that were actually installed (not already existing)
+            if user_requested and installed_packages:
+                # Create a tracking file for the metapackage installation
+                metapackage_tracking_dir = os.path.join(local_app_data, ".metapackages")
+                os.makedirs(metapackage_tracking_dir, exist_ok=True)
+                
+                # Remove .meta extension for tracking file name
+                tracking_name = package_name[:-5] if package_name.endswith('.meta') else package_name
+                tracking_file = os.path.join(metapackage_tracking_dir, f"{tracking_name}.installed")
+                
+                with open(tracking_file, 'w') as f:
+                    for pkg in installed_packages:  # Only newly installed packages
+                        f.write(f"{pkg}\n")
+                self._verbose_print(f"Created metapackage tracking file: {tracking_file}")
+                
+                if already_installed_packages:
+                    print(f"{Fore.CYAN}Note: {len(already_installed_packages)} packages were already installed and won't be tracked for uninstall:")
+                    for pkg in already_installed_packages:
+                        print(f"  - {Fore.YELLOW}{pkg}{Fore.CYAN} (already existed)")
+            
+            self._verbose_timing_end(f"install {package_name}")
+            
+            # Report results
+            total_packages = installed_packages + already_installed_packages
+            if total_packages:
+                print(f"\n{Fore.GREEN}✓ Metapackage {Fore.YELLOW}{package_name}{Fore.GREEN} processed successfully!")
+                if installed_packages:
+                    print(f"{Fore.GREEN}Newly installed: {Fore.CYAN}{', '.join(installed_packages)}")
+                if already_installed_packages:
+                    print(f"{Fore.BLUE}Already installed: {Fore.CYAN}{', '.join(already_installed_packages)}")
+            
+            if failed_packages:
+                print(f"{Fore.RED}Failed to install: {Fore.YELLOW}{', '.join(failed_packages)}")
+                
+            return
 
-            # GET {repo_url}/resolution
-            resolution_url = f"{repo_url}/resolution"
-            self._verbose_print(f"Fetching resolution data from: {resolution_url}")
-            resolution_response = requests.get(resolution_url, headers=self.headers, allow_redirects=True)  # type: ignore
-            self._verbose_print(f"GET {resolution_url}: {resolution_response.status_code}")
-            self._verbose_print(f"Resolution response status: {resolution_response.status_code}")
-            resolution_response.raise_for_status()
-            resolution_data = parse_jsonc(resolution_response.text)
-            self._verbose_print(f"Resolution data contains {len(resolution_data)} packages")
+        # GET {repo_url}/resolution
+        resolution_url = f"{repo_url}/resolution"
+        self._verbose_print(f"Fetching resolution data from: {resolution_url}")
+        resolution_response = requests.get(resolution_url, headers=self.headers, allow_redirects=True)  # type: ignore
+        self._verbose_print(f"GET {resolution_url}: {resolution_response.status_code}")
+        self._verbose_print(f"Resolution response status: {resolution_response.status_code}")
+        resolution_response.raise_for_status()
+        resolution_data = parse_jsonc(resolution_response.text)
+        self._verbose_print(f"Resolution data contains {len(resolution_data)} packages")
+        
+        # Check if package name needs to be resolved from alias to actual package name
+        self._verbose_print(f"Checking if '{package_name}' is an alias")
+        resolved_package = None
+        for actual_package, aliases in resolution_data.items():
+            if package_name in aliases:
+                resolved_package = actual_package
+                self._verbose_print(f"Alias '{package_name}' resolved to '{resolved_package}'")
+                print(f"Resolving alias '{package_name}' to '{resolved_package}'")
+                package_name = resolved_package
+                break
+        
+        if resolved_package is None:
+            self._verbose_print(f"'{package_name}' is not an alias, using as direct package name")
             
-            # Check if package name needs to be resolved from alias to actual package name
-            self._verbose_print(f"Checking if '{package_name}' is an alias")
-            resolved_package = None
-            for actual_package, aliases in resolution_data.items():
-                if package_name in aliases:
-                    resolved_package = actual_package
-                    self._verbose_print(f"Alias '{package_name}' resolved to '{resolved_package}'")
-                    print(f"Resolving alias '{package_name}' to '{resolved_package}'")
-                    package_name = resolved_package
-                    break
+        # Check if package is already installed
+        package_install_path = os.path.join(local_app_data, package_name)
+        self._verbose_print(f"Checking if package already installed at: {package_install_path}")
+        if os.path.exists(package_install_path):
+            self._verbose_print("Package directory already exists")
             
-            if resolved_package is None:
-                self._verbose_print(f"'{package_name}' is not an alias, using as direct package name")
-                
-            # Check if package is already installed
-            package_install_path = os.path.join(local_app_data, package_name)
-            self._verbose_print(f"Checking if package already installed at: {package_install_path}")
-            if os.path.exists(package_install_path):
-                self._verbose_print("Package directory already exists")
-                
-                # Check current installation status
-                user_installed_file = os.path.join(package_install_path, ".USER_INSTALLED")
-                is_currently_user_installed = os.path.exists(user_installed_file)
-                
-                if user_requested:
-                    # User is manually installing a package that already exists
-                    if is_currently_user_installed:
-                        self._verbose_print("Package is already user-installed")
-                        print(f"{Fore.YELLOW}Package '{Fore.CYAN}{package_name}{Fore.YELLOW}' is already installed by user at {package_install_path}")
-                        return
-                    else:
-                        # Package exists as dependency, convert to user-installed
-                        self._verbose_print("Package exists as dependency, converting to user-installed")
-                        print(f"{Fore.BLUE}Package '{Fore.CYAN}{package_name}{Fore.BLUE}' exists as dependency, converting to user-installed")
-                        self._mark_as_user_installed(package_name)
-                        return
+            # Check current installation status
+            user_installed_file = os.path.join(package_install_path, ".USER_INSTALLED")
+            is_currently_user_installed = os.path.exists(user_installed_file)
+            
+            if user_requested:
+                # User is manually installing a package that already exists
+                if is_currently_user_installed:
+                    self._verbose_print("Package is already user-installed")
+                    print(f"{Fore.YELLOW}Package '{Fore.CYAN}{package_name}{Fore.YELLOW}' is already installed by user at {package_install_path}")
+                    return
                 else:
-                    # Installing as dependency - don't change existing status
-                    if is_currently_user_installed:
-                        self._verbose_print("Package is user-installed, keeping that status")
-                        print(f"Package '{package_name}' is already user-installed at {package_install_path}")
-                    else:
-                        self._verbose_print("Package is dependency, keeping that status")
-                        print(f"Package '{package_name}' is already installed as dependency at {package_install_path}")
+                    # Package exists as dependency, convert to user-installed
+                    self._verbose_print("Package exists as dependency, converting to user-installed")
+                    print(f"{Fore.BLUE}Package '{Fore.CYAN}{package_name}{Fore.BLUE}' exists as dependency, converting to user-installed")
+                    self._mark_as_user_installed(package_name)
                     return
             else:
-                self._verbose_print("Package is not currently installed, proceeding with installation")
-                
-            # Check if package has an IMPORTANT file, if so, print it
-            important_file_url = f"{repo_url}/packages/{package_name}/IMPORTANT"
-            self._verbose_print(f"Checking for IMPORTANT file at: {important_file_url}")
-            important_response = requests.get(important_file_url, headers=self.headers, allow_redirects=True)  # type: ignore
-            self._verbose_print(f"GET {important_file_url}: {important_response.status_code}")
-            if important_response.status_code == 200:
-                self._verbose_print("IMPORTANT file found, displaying to user")
-                print(f"{Fore.YELLOW}Important information regarding package '{Fore.CYAN}{package_name}{Fore.YELLOW}':\n")
-                print(f"{Fore.LIGHTMAGENTA_EX}{important_response.text}{Style.RESET_ALL}\n")
-            
-            # Fetch package metadata
-            self._verbose_print(f"Fetching package metadata for: {package_name}")
-            print(f"{Fore.CYAN}Fetching metadata for package {Fore.YELLOW}{package_name}{Fore.CYAN}...")
-            package_data, source_file = self._fetch_package_metadata(repo_url, package_name)
-            self._verbose_print(f"Successfully fetched metadata from {source_file}")
-            if source_file == "paxd.yaml":
-                print(f"{Fore.GREEN}Found YAML package configuration, converted to paxd format")
-
-            pkg_name_friendly = f"{Fore.GREEN}{package_data.get('pkg_info', {}).get('pkg_name', package_name)}{Style.RESET_ALL}, by {Fore.MAGENTA}{package_data.get('pkg_info', {}).get('pkg_author', 'Unknown Author')}{Style.RESET_ALL} ({Fore.BLUE}{package_data.get('pkg_info', {}).get('pkg_version', 'Unknown Version')}{Style.RESET_ALL})"
-            self._verbose_print(f"Package info: {package_data.get('pkg_info', {})}")
-            print(f"{Fore.GREEN}Retrieved package metadata for '{pkg_name_friendly}'")
-
-            # Install dependencies and track them
-            dependencies = set()
-            dep_list = package_data.get("install", {}).get("depend", [])
-            self._verbose_print(f"Package has {len(dep_list)} dependencies: {dep_list}")
-            
-            for dep in dep_list:
-                dependencies.add(dep)
-                self._verbose_print(f"Processing dependency: {dep}")
-                try:
-                    # Dependency begins with "pip:": use pip to install
-                    if dep.startswith("pip:"):
-                        pip_package = dep[len("pip:"):]
-                        self._verbose_print(f"Installing pip package (with uv): {pip_package}")
-                        if pip_package == "uv":
-                            print(f"{Fore.RED}Skipped: UV: cannot update UV with UV, as pipx handles that")
-                            continue
-                        PIP_PACKAGES.append(pip_package)
-                    # Dependency begins with "winget": use winget to install
-                    elif dep.startswith("winget:"):
-                        winget_package = dep[len("winget:"):]
-                        self._verbose_print(f"Installing winget package: {winget_package}")
-                        print(f"{Fore.CYAN}Installing Windows package '{Fore.YELLOW}{winget_package}{Fore.CYAN}' via winget")
-                        result = os.system(f"winget install {winget_package}")
-                        self._verbose_print(f"Winget install result code: {result}")
-                    # Dependency begins with "choco:": use choco to install
-                    elif dep.startswith("choco:"):
-                        choco_package = dep[len("choco:"):]
-                        self._verbose_print(f"Installing choco package: {choco_package}")
-                        print(f"{Fore.CYAN}Installing Chocolatey package '{Fore.YELLOW}{choco_package}{Fore.CYAN}' via choco")
-                        result = os.system(f"choco install {choco_package}")
-                        self._verbose_print(f"Choco install result code: {result}")
-                    # Dependency begins with "npm:": use npm to install
-                    elif dep.startswith("npm:"):
-                        npm_package = dep[len("npm:"):]
-                        self._verbose_print(f"Installing npm package: {npm_package}")
-                        print(f"{Fore.CYAN}Installing Node.js package '{Fore.YELLOW}{npm_package}{Fore.CYAN}' via npm")
-                        result = os.system(f"npm install {npm_package}")
-                        self._verbose_print(f"NPM install result code: {result}")
-                    # Dependency begins with "paxd:": call self.install on the package
-                    elif dep.startswith("paxd:"):
-                        paxd_package = dep[len("paxd:"):]
-                        self._verbose_print(f"Installing PaxD dependency package: {paxd_package}")
-                        print(f"{Fore.CYAN}Installing PaxD package '{Fore.YELLOW}{paxd_package}{Fore.CYAN}' via PaxD")
-                        self.install(paxd_package, user_requested=False)
-                        # Mark this package as a dependency
-                        self._mark_as_dependency(paxd_package, package_name)
-                        self._verbose_print(f"Marked {paxd_package} as dependency of {package_name}")
-                    else:
-                        self._verbose_print(f"Unknown dependency type: {dep}")
-                        print(f"Unknown dependency type for '{dep}'")
-                except Exception as e:
-                    self._verbose_print(f"Failed to install dependency {dep}: {e}")
-                    raise DependencyError(f"Failed to install dependency '{dep}': {e}")
-                
-            if PIP_PACKAGES:
-                # Install all at once
-                self._verbose_print(f"Installing all pip packages at once: {PIP_PACKAGES}")
-                print(f"{Fore.CYAN}Installing all Python packages via pip: {', '.join(PIP_PACKAGES)}")
-                pip_install_command = ['uv', 'pip', 'install', '--system', '--python', sys.executable] + PIP_PACKAGES
-                result = subprocess.run(pip_install_command)
-                self._verbose_print(f"Pip install command result code: {result.returncode}")
-                if result.returncode != 0:
-                    raise DependencyError("Failed to install one or more pip packages")
-                PIP_PACKAGES.clear()  # Clear after installation
-
-            # For each file in package_data[install][include], GET that file and install (supporting relative paths like folder1/file2)
-            include_files = package_data.get("install", {}).get("include", [])
-            self._verbose_print(f"Installing {len(include_files)} files: {include_files}")
-            
-            for file in include_files:
-                self._verbose_print(f"Processing file: {file}")
-                if file == "README.html":
-                    self._verbose_print("Skipping auto-generated README.html file")
-                    print(f"{Fore.RED}File is an auto-generated README.html file - skipping...")
-                    continue
-                    
-                file_url = f"{repo_url}/packages/{package_name}/src/{file}"
-                self._verbose_print(f"Downloading file from: {file_url}")
-                file_response = requests.get(file_url, headers=self.headers, allow_redirects=True)  # type: ignore
-                self._verbose_print(f"GET {file_url}: {file_response.status_code}")
-                self._verbose_print(f"File download response: {file_response.status_code}")
-                file_response.raise_for_status()
-                file_data = file_response.content
-                self._verbose_print(f"Downloaded {len(file_data)} bytes")
-                
-                # Actually install this file to %LOCALAPPDATA%/<package_name>/{file}
-                install_path = os.path.join(local_app_data, package_name, file)
-                self._verbose_print(f"Installing file to: {install_path}")
-                os.makedirs(os.path.dirname(install_path), exist_ok=True)
-                with open(install_path, 'wb') as f:
-                    f.write(file_data)
-                self._verbose_print(f"Successfully wrote file to disk")
-                
-                # Check if this file has a checksum at package_data[install][checksum], if so, verify it
-                expected_checksum = package_data.get("install", {}).get("checksum", {}).get(file)
-                if expected_checksum and not skip_checksum:
-                    self._verbose_print(f"Verifying checksum for {file}: expected {expected_checksum}")
-                    # Also calculate checksum of the raw downloaded data for debugging
-                    raw_checksum = f"sha256:{hashlib.sha256(file_data).hexdigest()}"
-                    self._verbose_print(f"Raw downloaded data checksum: {raw_checksum}")
-                    self._verbose_print(f"Downloaded data length: {len(file_data)} bytes")
-                    # Verify the checksum
-                    sha256 = hashlib.sha256()
-                    with open(install_path, "rb") as f:
-                        while True:
-                            chunk: bytes = f.read(4096)
-                            if not chunk:
-                                break
-                            sha256.update(chunk)
-                    calculated_checksum = f"sha256:{sha256.hexdigest()}"
-                    self._verbose_print(f"Calculated checksum: {calculated_checksum}")
-                    if calculated_checksum == expected_checksum:
-                        self._verbose_print("Checksum verification passed")
-                        print(f"Checksum verified for {install_path}")
-                    else:
-                        self._verbose_print(f"Checksum verification failed: {calculated_checksum} != {expected_checksum}")
-                        print(f"Checksum mismatch for {install_path}: {calculated_checksum} != {expected_checksum}")
-                        # Delete the file if checksum verification fails
-                        os.remove(install_path)
-                        self._verbose_print(f"Deleted invalid file: {install_path}")
-                        print(f"Deleted invalid file {install_path}")
+                # Installing as dependency - don't change existing status
+                if is_currently_user_installed:
+                    self._verbose_print("Package is user-installed, keeping that status")
+                    print(f"Package '{package_name}' is already user-installed at {package_install_path}")
                 else:
-                    self._verbose_print("No checksum verification required for this file")
+                    self._verbose_print("Package is dependency, keeping that status")
+                    print(f"Package '{package_name}' is already installed as dependency at {package_install_path}")
+                return
+        else:
+            self._verbose_print("Package is not currently installed, proceeding with installation")
+            
+        # Check if package has an IMPORTANT file, if so, print it
+        important_file_url = f"{repo_url}/packages/{package_name}/IMPORTANT"
+        self._verbose_print(f"Checking for IMPORTANT file at: {important_file_url}")
+        important_response = requests.get(important_file_url, headers=self.headers, allow_redirects=True)  # type: ignore
+        self._verbose_print(f"GET {important_file_url}: {important_response.status_code}")
+        if important_response.status_code == 200:
+            self._verbose_print("IMPORTANT file found, displaying to user")
+            print(f"{Fore.YELLOW}Important information regarding package '{Fore.CYAN}{package_name}{Fore.YELLOW}':\n")
+            print(f"{Fore.LIGHTMAGENTA_EX}{important_response.text}{Style.RESET_ALL}\n")
+        
+        # Fetch package metadata
+        self._verbose_print(f"Fetching package metadata for: {package_name}")
+        print(f"{Fore.CYAN}Fetching metadata for package {Fore.YELLOW}{package_name}{Fore.CYAN}...")
+        package_data, source_file = self._fetch_package_metadata(repo_url, package_name)
+        self._verbose_print(f"Successfully fetched metadata from {source_file}")
+        if source_file == "paxd.yaml":
+            print(f"{Fore.GREEN}Found YAML package configuration, converted to paxd format")
 
-            # If package_data[install][firstrun], create a .FIRSTRUN file. If this value is false or non-existent, ignore and continue
-            firstrun_flag = package_data.get("install", {}).get("firstrun")
-            self._verbose_print(f"Firstrun flag: {firstrun_flag}")
-            if firstrun_flag:
-                firstrun_path = os.path.join(local_app_data, package_name, ".FIRSTRUN")
-                self._verbose_print(f"Creating .FIRSTRUN file at: {firstrun_path}")
-                with open(firstrun_path, 'w') as f:
-                    f.write("This file indicates that the package has been run for the first time.")
-                print(f"Created .FIRSTRUN file at {firstrun_path}")
-                
-            # If package_data[install][mainfile] exists and has a value, run some code to make a bat file in a predefined directory that exists in PATH
-            mainfile = package_data.get("install", {}).get("mainfile")
-            self._verbose_print(f"Mainfile: {mainfile}")
-            if mainfile:
-                alias = package_data.get("install", {}).get("alias", mainfile.split(".")[0])
-                self._verbose_print(f"Creating batch file with alias: {alias}")
-                bat_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bin", f"{alias}.bat")
-                self._verbose_print(f"Batch file path: {bat_file_path}")
-                if not os.path.exists(bat_file_path):
-                    self._verbose_print("Creating new batch file")
-                    with open(bat_file_path, 'w') as f:
-                        f.write(f"@echo off\n")
-                        f.write(f'"{sys.executable}" "{os.path.join(local_app_data, "com.mralfiem591.paxd", "run_pkg.py")}" "{os.path.join(local_app_data, package_name, mainfile)}" %*\n')
-                    print(f"Created batch file at {bat_file_path}")
+        pkg_name_friendly = f"{Fore.GREEN}{package_data.get('pkg_info', {}).get('pkg_name', package_name)}{Style.RESET_ALL}, by {Fore.MAGENTA}{package_data.get('pkg_info', {}).get('pkg_author', 'Unknown Author')}{Style.RESET_ALL} ({Fore.BLUE}{package_data.get('pkg_info', {}).get('pkg_version', 'Unknown Version')}{Style.RESET_ALL})"
+        self._verbose_print(f"Package info: {package_data.get('pkg_info', {})}")
+        print(f"{Fore.GREEN}Retrieved package metadata for '{pkg_name_friendly}'")
+
+        # Install dependencies and track them
+        dependencies = set()
+        dep_list = package_data.get("install", {}).get("depend", [])
+        self._verbose_print(f"Package has {len(dep_list)} dependencies: {dep_list}")
+        
+        for dep in dep_list:
+            dependencies.add(dep)
+            self._verbose_print(f"Processing dependency: {dep}")
+            try:
+                # Dependency begins with "pip:": use pip to install
+                if dep.startswith("pip:"):
+                    pip_package = dep[len("pip:"):]
+                    self._verbose_print(f"Installing pip package (with uv): {pip_package}")
+                    if pip_package == "uv":
+                        print(f"{Fore.RED}Skipped: UV: cannot update UV with UV, as pipx handles that")
+                        continue
+                    PIP_PACKAGES.append(pip_package)
+                # Dependency begins with "winget": use winget to install
+                elif dep.startswith("winget:"):
+                    winget_package = dep[len("winget:"):]
+                    self._verbose_print(f"Installing winget package: {winget_package}")
+                    print(f"{Fore.CYAN}Installing Windows package '{Fore.YELLOW}{winget_package}{Fore.CYAN}' via winget")
+                    result = os.system(f"winget install {winget_package}")
+                    self._verbose_print(f"Winget install result code: {result}")
+                # Dependency begins with "choco:": use choco to install
+                elif dep.startswith("choco:"):
+                    choco_package = dep[len("choco:"):]
+                    self._verbose_print(f"Installing choco package: {choco_package}")
+                    print(f"{Fore.CYAN}Installing Chocolatey package '{Fore.YELLOW}{choco_package}{Fore.CYAN}' via choco")
+                    result = os.system(f"choco install {choco_package}")
+                    self._verbose_print(f"Choco install result code: {result}")
+                # Dependency begins with "npm:": use npm to install
+                elif dep.startswith("npm:"):
+                    npm_package = dep[len("npm:"):]
+                    self._verbose_print(f"Installing npm package: {npm_package}")
+                    print(f"{Fore.CYAN}Installing Node.js package '{Fore.YELLOW}{npm_package}{Fore.CYAN}' via npm")
+                    result = os.system(f"npm install {npm_package}")
+                    self._verbose_print(f"NPM install result code: {result}")
+                # Dependency begins with "paxd:": call self.install on the package
+                elif dep.startswith("paxd:"):
+                    paxd_package = dep[len("paxd:"):]
+                    self._verbose_print(f"Installing PaxD dependency package: {paxd_package}")
+                    print(f"{Fore.CYAN}Installing PaxD package '{Fore.YELLOW}{paxd_package}{Fore.CYAN}' via PaxD")
+                    self.install(paxd_package, user_requested=False)
+                    # Mark this package as a dependency
+                    self._mark_as_dependency(paxd_package, package_name)
+                    self._verbose_print(f"Marked {paxd_package} as dependency of {package_name}")
                 else:
-                    self._verbose_print("Batch file already exists, skipping creation")
+                    self._verbose_print(f"Unknown dependency type: {dep}")
+                    print(f"Unknown dependency type for '{dep}'")
+            except Exception as e:
+                self._verbose_print(f"Failed to install dependency {dep}: {e}")
+                raise DependencyError(f"Failed to install dependency '{dep}': {e}")
             
-            # Create version file for tracking updates
-            version_file = os.path.join(local_app_data, package_name, ".VERSION")
-            installed_version = package_data.get('pkg_info', {}).get('pkg_version', 'Unknown')
-            self._verbose_print(f"Creating version file: {version_file} with version: {installed_version}")
-            with open(version_file, 'w') as f:
-                f.write(installed_version)
-            
-            # Save dependencies for future cleanup tracking
-            deps_file = os.path.join(local_app_data, package_name, ".DEPENDENCIES")
-            self._verbose_print(f"Saving {len(dependencies)} dependencies to: {deps_file}")
-            with open(deps_file, 'w') as f:
-                for dep in sorted(dependencies):
-                    f.write(f"{dep}\n")
-            
-            # Mark as user-installed if requested by user (not as dependency)
-            if user_requested:
-                self._verbose_print("Marking package as user-installed...")
-                self._mark_as_user_installed(package_name)
-            else:
-                self._verbose_print("Package installed as dependency, not marking as user-installed")
-            
-            self._verbose_timing_end(f"install {package_name}")
-            print(f"{Fore.GREEN}✓ Installed version {Fore.CYAN}{installed_version}{Fore.GREEN} of '{pkg_name_friendly}'{Style.RESET_ALL}")
-            if mainfile:
-                print(f"{Fore.YELLOW}Easily run it with '{Fore.GREEN}{alias if alias else mainfile.split('.')[0]}{Fore.YELLOW}' in your shell.")
+        if PIP_PACKAGES:
+            # Install all at once
+            self._verbose_print(f"Installing all pip packages at once: {PIP_PACKAGES}")
+            print(f"{Fore.CYAN}Installing all Python packages via pip: {', '.join(PIP_PACKAGES)}")
+            pip_install_command = ['uv', 'pip', 'install', '--system', '--python', sys.executable] + PIP_PACKAGES
+            result = subprocess.run(pip_install_command)
+            self._verbose_print(f"Pip install command result code: {result.returncode}")
+            if result.returncode != 0:
+                raise DependencyError("Failed to install one or more pip packages")
+            PIP_PACKAGES.clear()  # Clear after installation
 
-        except FileNotFoundError as e:
-            self._verbose_print(f"FileNotFoundError: {e}")
-            self._verbose_timing_end(f"install {package_name}")
-            error_msg = str(e)
-            if "not found in repository" in error_msg:
-                print(f"{Fore.RED}Package '{Fore.YELLOW}{package_name}{Fore.RED}' was not found in the repository.")
-                print(f"{Fore.CYAN}Try searching for similar packages with: {Fore.GREEN}paxd search {package_name}?")
+        # For each file in package_data[install][include], GET that file and install (supporting relative paths like folder1/file2)
+        include_files = package_data.get("install", {}).get("include", [])
+        self._verbose_print(f"Installing {len(include_files)} files: {include_files}")
+        
+        for file in include_files:
+            self._verbose_print(f"Processing file: {file}")
+            if file == "README.html":
+                self._verbose_print("Skipping auto-generated README.html file")
+                print(f"{Fore.RED}File is an auto-generated README.html file - skipping...")
+                continue
+                
+            file_url = f"{repo_url}/packages/{package_name}/src/{file}"
+            self._verbose_print(f"Downloading file from: {file_url}")
+            file_response = requests.get(file_url, headers=self.headers, allow_redirects=True)  # type: ignore
+            self._verbose_print(f"GET {file_url}: {file_response.status_code}")
+            self._verbose_print(f"File download response: {file_response.status_code}")
+            file_response.raise_for_status()
+            file_data = file_response.content
+            self._verbose_print(f"Downloaded {len(file_data)} bytes")
+            
+            # Actually install this file to %LOCALAPPDATA%/<package_name>/{file}
+            install_path = os.path.join(local_app_data, package_name, file)
+            self._verbose_print(f"Installing file to: {install_path}")
+            os.makedirs(os.path.dirname(install_path), exist_ok=True)
+            with open(install_path, 'wb') as f:
+                f.write(file_data)
+            self._verbose_print(f"Successfully wrote file to disk")
+            
+            # Check if this file has a checksum at package_data[install][checksum], if so, verify it
+            expected_checksum = package_data.get("install", {}).get("checksum", {}).get(file)
+            if expected_checksum and not skip_checksum:
+                self._verbose_print(f"Verifying checksum for {file}: expected {expected_checksum}")
+                # Also calculate checksum of the raw downloaded data for debugging
+                raw_checksum = f"sha256:{hashlib.sha256(file_data).hexdigest()}"
+                self._verbose_print(f"Raw downloaded data checksum: {raw_checksum}")
+                self._verbose_print(f"Downloaded data length: {len(file_data)} bytes")
+                # Verify the checksum
+                sha256 = hashlib.sha256()
+                with open(install_path, "rb") as f:
+                    while True:
+                        chunk: bytes = f.read(4096)
+                        if not chunk:
+                            break
+                        sha256.update(chunk)
+                calculated_checksum = f"sha256:{sha256.hexdigest()}"
+                self._verbose_print(f"Calculated checksum: {calculated_checksum}")
+                if calculated_checksum == expected_checksum:
+                    self._verbose_print("Checksum verification passed")
+                    print(f"Checksum verified for {install_path}")
+                else:
+                    self._verbose_print(f"Checksum verification failed: {calculated_checksum} != {expected_checksum}")
+                    print(f"Checksum mismatch for {install_path}: {calculated_checksum} != {expected_checksum}")
+                    # Delete the file if checksum verification fails
+                    os.remove(install_path)
+                    self._verbose_print(f"Deleted invalid file: {install_path}")
+                    print(f"Deleted invalid file {install_path}")
             else:
-                print(f"{Fore.RED}Error: {error_msg}")
-        except requests.HTTPError as e:
-            self._verbose_print(f"HTTPError: {e}")
-            self._verbose_timing_end(f"install {package_name}")
-            if hasattr(e, 'response') and e.response.status_code == 404:
-                print(f"{Fore.RED}Package '{Fore.YELLOW}{package_name}{Fore.RED}' was not found in the repository.")
-                print(f"{Fore.CYAN}Try searching for similar packages with: {Fore.GREEN}paxd search {package_name}")
+                self._verbose_print("No checksum verification required for this file")
+
+        # If package_data[install][firstrun], create a .FIRSTRUN file. If this value is false or non-existent, ignore and continue
+        firstrun_flag = package_data.get("install", {}).get("firstrun")
+        self._verbose_print(f"Firstrun flag: {firstrun_flag}")
+        if firstrun_flag:
+            firstrun_path = os.path.join(local_app_data, package_name, ".FIRSTRUN")
+            self._verbose_print(f"Creating .FIRSTRUN file at: {firstrun_path}")
+            with open(firstrun_path, 'w') as f:
+                f.write("This file indicates that the package has been run for the first time.")
+            print(f"Created .FIRSTRUN file at {firstrun_path}")
+            
+        # If package_data[install][mainfile] exists and has a value, run some code to make a bat file in a predefined directory that exists in PATH
+        mainfile = package_data.get("install", {}).get("mainfile")
+        self._verbose_print(f"Mainfile: {mainfile}")
+        if mainfile:
+            alias = package_data.get("install", {}).get("alias", mainfile.split(".")[0])
+            self._verbose_print(f"Creating batch file with alias: {alias}")
+            bat_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bin", f"{alias}.bat")
+            self._verbose_print(f"Batch file path: {bat_file_path}")
+            if not os.path.exists(bat_file_path):
+                self._verbose_print("Creating new batch file")
+                with open(bat_file_path, 'w') as f:
+                    f.write(f"@echo off\n")
+                    f.write(f'"{sys.executable}" "{os.path.join(local_app_data, "com.mralfiem591.paxd", "run_pkg.py")}" "{os.path.join(local_app_data, package_name, mainfile)}" %*\n')
+                print(f"Created batch file at {bat_file_path}")
             else:
-                print(f"{Fore.RED}HTTP error: {e}")
-        except requests.RequestException as e:
-            self._verbose_print(f"RequestException: {e}")
-            self._verbose_timing_end(f"install {package_name}")
-            print(f"{Fore.RED}Network error: {e}")
-        except json.JSONDecodeError as e:
-            self._verbose_print(f"JSONDecodeError: {e}")
-            self._verbose_timing_end(f"install {package_name}")
-            print(f"JSON parsing error: {e}")
-        except DependencyError as e:
-            self._verbose_print(f"DependencyError: {e}")
-            self._verbose_timing_end(f"install {package_name}")
-            print(f"Dependency error: {e}")
-        except Exception as e:
-            self._verbose_print(f"Unexpected error: {e}")
-            self._verbose_timing_end(f"install {package_name}")
-            print(f"Unexpected error: {e}")
+                self._verbose_print("Batch file already exists, skipping creation")
+        
+        # Create version file for tracking updates
+        version_file = os.path.join(local_app_data, package_name, ".VERSION")
+        installed_version = package_data.get('pkg_info', {}).get('pkg_version', 'Unknown')
+        self._verbose_print(f"Creating version file: {version_file} with version: {installed_version}")
+        with open(version_file, 'w') as f:
+            f.write(installed_version)
+        
+        # Save dependencies for future cleanup tracking
+        deps_file = os.path.join(local_app_data, package_name, ".DEPENDENCIES")
+        self._verbose_print(f"Saving {len(dependencies)} dependencies to: {deps_file}")
+        with open(deps_file, 'w') as f:
+            for dep in sorted(dependencies):
+                f.write(f"{dep}\n")
+        
+        # Mark as user-installed if requested by user (not as dependency)
+        if user_requested:
+            self._verbose_print("Marking package as user-installed...")
+            self._mark_as_user_installed(package_name)
+        else:
+            self._verbose_print("Package installed as dependency, not marking as user-installed")
+        
+        self._verbose_timing_end(f"install {package_name}")
+        print(f"{Fore.GREEN}✓ Installed version {Fore.CYAN}{installed_version}{Fore.GREEN} of '{pkg_name_friendly}'{Style.RESET_ALL}")
+        if mainfile:
+            print(f"{Fore.YELLOW}Easily run it with '{Fore.GREEN}{alias if alias else mainfile.split('.')[0]}{Fore.YELLOW}' in your shell.")
     
     def uninstall(self, package_name):
         """Uninstall a package."""
@@ -1043,254 +1008,195 @@ class PaxD:
         self._verbose_print(f"Uninstalling package: {package_name}")
         print(f"{Fore.RED}Uninstalling {Fore.CYAN}{package_name}{Fore.RED}...")
         
-        try:
-            # Read and resolve repository URL
-            self._verbose_print("Reading and resolving repository URL for uninstall")
-            repo_url = self._read_repository_url()
-            repo_url = self._resolve_repository_url(repo_url)
-            local_app_data = os.path.join(os.path.expandvars(r"%LOCALAPPDATA%"), "PaxD")
-            self._verbose_print(f"Local app data directory: {local_app_data}")
+        # Read and resolve repository URL
+        self._verbose_print("Reading and resolving repository URL for uninstall")
+        repo_url = self._read_repository_url()
+        repo_url = self._resolve_repository_url(repo_url)
+        local_app_data = os.path.join(os.path.expandvars(r"%LOCALAPPDATA%"), "PaxD")
+        self._verbose_print(f"Local app data directory: {local_app_data}")
+        
+        # Check if this is a metapackage
+        if self._is_metapackage(package_name):
+            self._verbose_print(f"Detected metapackage for uninstall: {package_name}")
+            print(f"{Fore.CYAN}Uninstalling metapackage {Fore.YELLOW}{package_name}{Fore.CYAN}...")
             
-            # Check if this is a metapackage
-            if self._is_metapackage(package_name):
-                self._verbose_print(f"Detected metapackage for uninstall: {package_name}")
-                print(f"{Fore.CYAN}Uninstalling metapackage {Fore.YELLOW}{package_name}{Fore.CYAN}...")
-                
-                # Fetch the list of packages from the metapackage
-                try:
-                    package_list = self._fetch_metapackage_data(repo_url, package_name)
-                except FileNotFoundError as e:
-                    self._verbose_print(f"Metapackage not found: {e}")
-                    self._verbose_timing_end(f"uninstall {package_name}")
-                    print(f"{Fore.RED}Error: {e}")
-                    return
-                
-                print(f"{Fore.GREEN}Metapackage contains {len(package_list)} packages:")
-                for pkg in package_list:
-                    print(f"  - {Fore.CYAN}{pkg}")
-                print()
-                
-                # Check if there's a metapackage tracking file
-                tracking_name = package_name[:-5] if package_name.endswith('.meta') else package_name
-                metapackage_tracking_dir = os.path.join(local_app_data, ".metapackages")
-                tracking_file = os.path.join(metapackage_tracking_dir, f"{tracking_name}.installed")
-                
-                # Only uninstall packages that were installed as part of this metapackage
-                # and are not needed as dependencies by other packages
-                print(f"{Fore.YELLOW}Note: Only packages installed by this metapackage will be uninstalled.")
-                print(f"{Fore.YELLOW}Packages needed as dependencies by other packages will be kept.")
-                print()
-                
-                packages_to_check = package_list
-                if os.path.exists(tracking_file):
-                    # Use the tracking file to know exactly which packages were installed by this metapackage
-                    with open(tracking_file, 'r') as f:
-                        packages_to_check = [line.strip() for line in f if line.strip()]
-                    print(f"{Fore.CYAN}Found metapackage tracking file - checking {len(packages_to_check)} packages.")
-                else:
-                    print(f"{Fore.YELLOW}No metapackage tracking file found - checking all packages in metapackage.")
-                
-                uninstalled_packages = []
-                skipped_packages = []
-                failed_packages = []
-                
-                for pkg in packages_to_check:
-                    try:
-                        pkg_path = os.path.join(local_app_data, pkg)
-                        dependency_file = os.path.join(pkg_path, ".DEPENDENCY")
-                        
-                        if not os.path.exists(pkg_path):
-                            print(f"{Fore.YELLOW}Skipping {Fore.CYAN}{pkg}{Fore.YELLOW} (not installed)")
-                            skipped_packages.append(pkg)
-                            continue
-                        
-                        # Check if package is still needed as a dependency by other packages
-                        is_dependency_of_others = False
-                        if os.path.exists(dependency_file):
-                            with open(dependency_file, 'r') as f:
-                                dependent_packages = [line.strip() for line in f if line.strip()]
-                                # Check if any dependencies still exist
-                                for dep_pkg in dependent_packages:
-                                    dep_pkg_path = os.path.join(local_app_data, dep_pkg)
-                                    if os.path.exists(dep_pkg_path):
-                                        is_dependency_of_others = True
-                                        self._verbose_print(f"Package {pkg} is still needed by {dep_pkg}")
-                                        break
-                        
-                        if not is_dependency_of_others:
-                            print(f"{Fore.RED}Uninstalling package {Fore.YELLOW}{pkg}{Fore.RED}...")
-                            self.uninstall(pkg)
-                            uninstalled_packages.append(pkg)
-                        else:
-                            print(f"{Fore.YELLOW}Skipping {Fore.CYAN}{pkg}{Fore.YELLOW} (needed as dependency by other packages)")
-                            skipped_packages.append(pkg)
-                    except Exception as e:
-                        self._verbose_print(f"Failed to uninstall package {pkg} from metapackage: {e}")
-                        print(f"{Fore.RED}Failed to uninstall {Fore.YELLOW}{pkg}{Fore.RED}: {e}")
-                        failed_packages.append(pkg)
-                
-                # Clean up the metapackage tracking file if it exists
-                if os.path.exists(tracking_file):
-                    try:
-                        os.remove(tracking_file)
-                        self._verbose_print(f"Removed metapackage tracking file: {tracking_file}")
-                    except Exception as e:
-                        self._verbose_print(f"Failed to remove tracking file {tracking_file}: {e}")
-                
+            # Fetch the list of packages from the metapackage
+            try:
+                package_list = self._fetch_metapackage_data(repo_url, package_name)
+            except FileNotFoundError as e:
+                self._verbose_print(f"Metapackage not found: {e}")
                 self._verbose_timing_end(f"uninstall {package_name}")
-                
-                # Report results
-                if uninstalled_packages:
-                    print(f"\n{Fore.GREEN}✓ Metapackage {Fore.YELLOW}{package_name}{Fore.GREEN} processed successfully!")
-                    print(f"{Fore.GREEN}Uninstalled packages: {Fore.CYAN}{', '.join(uninstalled_packages)}")
-                
-                if skipped_packages:
-                    print(f"{Fore.YELLOW}Skipped packages: {Fore.CYAN}{', '.join(skipped_packages)}")
-                    
-                if failed_packages:
-                    print(f"{Fore.RED}Failed to uninstall: {Fore.YELLOW}{', '.join(failed_packages)}")
-                    
-                return
-
-            # GET {repo_url}/resolution
-            resolution_url = f"{repo_url}/resolution"
-            self._verbose_print(f"Fetching resolution data from: {resolution_url}")
-            resolution_response = requests.get(resolution_url, headers=self.headers, allow_redirects=True)  # type: ignore
-            self._verbose_print(f"GET {resolution_url}: {resolution_response.status_code}")
-            self._verbose_print(f"Resolution response status: {resolution_response.status_code}")
-            resolution_response.raise_for_status()
-            resolution_data = parse_jsonc(resolution_response.text)
-            self._verbose_print(f"Resolution data contains {len(resolution_data)} packages")
-            
-            # Check if package name needs to be resolved from alias to actual package name
-            self._verbose_print(f"Checking if '{package_name}' is an alias")
-            resolved_package = None
-            for actual_package, aliases in resolution_data.items():
-                if package_name in aliases:
-                    resolved_package = actual_package
-                    print(f"{Fore.BLUE}Resolving alias '{Fore.YELLOW}{package_name}{Fore.BLUE}' to '{Fore.CYAN}{resolved_package}{Fore.BLUE}'")
-                    package_name = resolved_package
-                    break
-                
-            if package_name == "com.mralfiem591.paxd":
-                print(f"{Fore.RED}Cannot uninstall PaxD itself using PaxD. Please uninstall manually.")
-                return
-
-            # Fetch package metadata
-            self._verbose_print(f"Fetching package metadata for uninstall: {package_name}")
-            package_data, source_file = self._fetch_package_metadata(repo_url, package_name)
-            self._verbose_print(f"Successfully fetched metadata from {source_file}")
-            
-            # Check if package is actually installed
-            package_install_path = os.path.join(local_app_data, package_name)
-            if not os.path.exists(package_install_path):
-                if os.path.exists(os.path.join(os.path.dirname(os.path.abspath(__file__)), "bin", f"{package_data.get('install', {}).get('alias', package_name)}.bat")):
-                    print(f"{Fore.YELLOW}Package '{Fore.CYAN}{package_name}{Fore.YELLOW}' is already not installed, but found leftover files. Cleaning up...")
-                    os.remove(os.path.join(os.path.dirname(os.path.abspath(__file__)), "bin", f"{package_data.get('install', {}).get('alias', package_name)}.bat"))
-                print(f"{Fore.YELLOW}Package '{Fore.CYAN}{package_name}{Fore.YELLOW}' is already not installed.")
+                print(f"{Fore.RED}Error: {e}")
                 return
             
-            pkg_name_friendly = f"{Fore.GREEN}{package_data.get('pkg_info', {}).get('pkg_name', package_name)}{Style.RESET_ALL}, by {Fore.MAGENTA}{package_data.get('pkg_info', {}).get('pkg_author', 'Unknown Author')}{Style.RESET_ALL} ({Fore.BLUE}{package_data.get('pkg_info', {}).get('pkg_version', 'Unknown Version')}{Style.RESET_ALL})"
-            print(f"{Fore.CYAN}Retrieved package metadata for '{pkg_name_friendly}'")
+            print(f"{Fore.GREEN}Metapackage contains {len(package_list)} packages:")
+            for pkg in package_list:
+                print(f"  - {Fore.CYAN}{pkg}")
+            print()
             
-            # Remove the bat file from bin, if it exists
-            bat_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bin", f"{package_data.get('install', {}).get('alias', package_name)}.bat")
-            if os.path.exists(bat_file_path):
-                os.remove(bat_file_path)
-                print(f"{Fore.RED}Deleted {bat_file_path}")
-
-            # If package_data[uninstall][file] exists and has a value, run that file in a new shell window, closing it once it's done
-            uninstall_file = package_data.get("uninstall", {}).get("file")
-            if uninstall_file:
-                uninstall_file_path = os.path.join(local_app_data, package_name, uninstall_file)
-                if os.path.exists(uninstall_file_path) and uninstall_file.endswith(".py"):
-                    print(f"{Fore.YELLOW}Running uninstall script {Fore.CYAN}{uninstall_file_path}{Fore.YELLOW}... Note that you may need to take action in another terminal window.")
-                    self._verbose_print(f"Running uninstall script: {uninstall_file_path} in new cmd window")
-                    subprocess.run(f"start cmd /c python {uninstall_file_path}", shell=True)
-                    # Wait until the uninstall script is completed
-                    input(f"{Fore.YELLOW}Press Enter once the uninstall script has completed (other window will close)...")
-                    self._verbose_print("Uninstall script completed")
+            # Check if there's a metapackage tracking file
+            tracking_name = package_name[:-5] if package_name.endswith('.meta') else package_name
+            metapackage_tracking_dir = os.path.join(local_app_data, ".metapackages")
+            tracking_file = os.path.join(metapackage_tracking_dir, f"{tracking_name}.installed")
             
-            # Clean up dependencies before deleting the package
-            deps_file = os.path.join(local_app_data, package_name, ".DEPENDENCIES")
-            if os.path.exists(deps_file):
-                with open(deps_file, 'r') as f:
-                    for line in f:
-                        dep = line.strip()
-                        if dep and dep.startswith("paxd:"):
-                            paxd_package = dep[len("paxd:"):]
-                            self._remove_dependency_reference(paxd_package, package_name)
-                    
-            # Now for the fun part - deleting the package folder from %LOCALAPPDATA%/<package_name>
-            self._verbose_print(f"Deleting package folder: {package_name} at {package_install_path}")
-            package_folder = os.path.join(local_app_data, package_name)
-            if os.path.exists(package_folder):
-                shutil.rmtree(package_folder, onerror=permission_handler)
-                # Check package folder is deleted
-                if not os.path.exists(package_folder):
-                    print(f"{Fore.GREEN}✓ Successfully uninstalled '{Fore.CYAN}{package_name}{Fore.GREEN}' - deleted package folder {package_folder}")
-                    self._verbose_print(f"Successfully uninstalled package: {package_name}")
-                else:
-                    print(f"{Fore.RED}Failed to delete package folder {package_folder}")
-                    self._verbose_print(f"Failed to delete package folder: {package_folder}")
-                    
-        except FileNotFoundError as e:
-            self._verbose_print(f"FileNotFoundError in uninstall: {e}")
-            self._verbose_timing_end(f"uninstall {package_name}")
-            error_msg = str(e)
-            if "not found in repository" in error_msg:
-                print(f"{Fore.RED}Package '{Fore.YELLOW}{package_name}{Fore.RED}' was not found in the repository.")
-                print(f"{Fore.YELLOW}Note: This might mean the package was removed from the repository.")
-                print(f"{Fore.CYAN}You can still try to uninstall locally installed files if they exist.")
-                # Try to uninstall local files even if not in repository
-                local_app_data = os.path.join(os.path.expandvars(r"%LOCALAPPDATA%"), "PaxD")
-                package_folder = os.path.join(local_app_data, package_name)
-                if os.path.exists(package_folder):
-                    print(f"{Fore.YELLOW}Found local installation, attempting cleanup...")
-                    try:
-                        shutil.rmtree(package_folder, onerror=permission_handler)
-                        if not os.path.exists(package_folder):
-                            print(f"{Fore.GREEN}✓ Successfully removed local files for '{Fore.CYAN}{package_name}{Fore.GREEN}'")
-                        else:
-                            print(f"{Fore.RED}Failed to remove local files for '{package_name}'")
-                    except Exception as cleanup_error:
-                        print(f"{Fore.RED}Error during cleanup: {cleanup_error}")
-                else:
-                    print(f"{Fore.YELLOW}Package '{Fore.CYAN}{package_name}{Fore.YELLOW}' is not installed locally.")
+            # Only uninstall packages that were installed as part of this metapackage
+            # and are not needed as dependencies by other packages
+            print(f"{Fore.YELLOW}Note: Only packages installed by this metapackage will be uninstalled.")
+            print(f"{Fore.YELLOW}Packages needed as dependencies by other packages will be kept.")
+            print()
+            
+            packages_to_check = package_list
+            if os.path.exists(tracking_file):
+                # Use the tracking file to know exactly which packages were installed by this metapackage
+                with open(tracking_file, 'r') as f:
+                    packages_to_check = [line.strip() for line in f if line.strip()]
+                print(f"{Fore.CYAN}Found metapackage tracking file - checking {len(packages_to_check)} packages.")
             else:
-                print(f"{Fore.RED}Error: {error_msg}")
-        except requests.HTTPError as e:
-            self._verbose_print(f"HTTPError in uninstall: {e}")
+                print(f"{Fore.YELLOW}No metapackage tracking file found - checking all packages in metapackage.")
+            
+            uninstalled_packages = []
+            skipped_packages = []
+            failed_packages = []
+            
+            for pkg in packages_to_check:
+                try:
+                    pkg_path = os.path.join(local_app_data, pkg)
+                    dependency_file = os.path.join(pkg_path, ".DEPENDENCY")
+                    
+                    if not os.path.exists(pkg_path):
+                        print(f"{Fore.YELLOW}Skipping {Fore.CYAN}{pkg}{Fore.YELLOW} (not installed)")
+                        skipped_packages.append(pkg)
+                        continue
+                    
+                    # Check if package is still needed as a dependency by other packages
+                    is_dependency_of_others = False
+                    if os.path.exists(dependency_file):
+                        with open(dependency_file, 'r') as f:
+                            dependent_packages = [line.strip() for line in f if line.strip()]
+                            # Check if any dependencies still exist
+                            for dep_pkg in dependent_packages:
+                                dep_pkg_path = os.path.join(local_app_data, dep_pkg)
+                                if os.path.exists(dep_pkg_path):
+                                    is_dependency_of_others = True
+                                    self._verbose_print(f"Package {pkg} is still needed by {dep_pkg}")
+                                    break
+                    
+                    if not is_dependency_of_others:
+                        print(f"{Fore.RED}Uninstalling package {Fore.YELLOW}{pkg}{Fore.RED}...")
+                        self.uninstall(pkg)
+                        uninstalled_packages.append(pkg)
+                    else:
+                        print(f"{Fore.YELLOW}Skipping {Fore.CYAN}{pkg}{Fore.YELLOW} (needed as dependency by other packages)")
+                        skipped_packages.append(pkg)
+                except Exception as e:
+                    self._verbose_print(f"Failed to uninstall package {pkg} from metapackage: {e}")
+                    print(f"{Fore.RED}Failed to uninstall {Fore.YELLOW}{pkg}{Fore.RED}: {e}")
+                    failed_packages.append(pkg)
+            
+            # Clean up the metapackage tracking file if it exists
+            if os.path.exists(tracking_file):
+                try:
+                    os.remove(tracking_file)
+                    self._verbose_print(f"Removed metapackage tracking file: {tracking_file}")
+                except Exception as e:
+                    self._verbose_print(f"Failed to remove tracking file {tracking_file}: {e}")
+            
             self._verbose_timing_end(f"uninstall {package_name}")
-            if hasattr(e, 'response') and e.response.status_code == 404:
-                print(f"{Fore.RED}Package '{Fore.YELLOW}{package_name}{Fore.RED}' was not found in the repository.")
-                print(f"{Fore.YELLOW}Note: This might mean the package was removed from the repository.")
-                print(f"{Fore.CYAN}You can still try to uninstall locally installed files if they exist.")
-                # Try to uninstall local files even if not in repository
-                local_app_data = os.path.join(os.path.expandvars(r"%LOCALAPPDATA%"), "PaxD")
-                package_folder = os.path.join(local_app_data, package_name)
-                if os.path.exists(package_folder):
-                    print(f"{Fore.YELLOW}Found local installation, attempting cleanup...")
-                    try:
-                        shutil.rmtree(package_folder, onerror=permission_handler)
-                        if not os.path.exists(package_folder):
-                            print(f"{Fore.GREEN}✓ Successfully removed local files for '{Fore.CYAN}{package_name}{Fore.GREEN}'")
-                        else:
-                            print(f"{Fore.RED}Failed to remove local files for '{package_name}'")
-                    except Exception as cleanup_error:
-                        print(f"{Fore.RED}Error during cleanup: {cleanup_error}")
-                else:
-                    print(f"{Fore.YELLOW}Package '{Fore.CYAN}{package_name}{Fore.YELLOW}' is not installed locally.")
+            
+            # Report results
+            if uninstalled_packages:
+                print(f"\n{Fore.GREEN}✓ Metapackage {Fore.YELLOW}{package_name}{Fore.GREEN} processed successfully!")
+                print(f"{Fore.GREEN}Uninstalled packages: {Fore.CYAN}{', '.join(uninstalled_packages)}")
+            
+            if skipped_packages:
+                print(f"{Fore.YELLOW}Skipped packages: {Fore.CYAN}{', '.join(skipped_packages)}")
+                
+            if failed_packages:
+                print(f"{Fore.RED}Failed to uninstall: {Fore.YELLOW}{', '.join(failed_packages)}")
+                
+            return
+
+        # GET {repo_url}/resolution
+        resolution_url = f"{repo_url}/resolution"
+        self._verbose_print(f"Fetching resolution data from: {resolution_url}")
+        resolution_response = requests.get(resolution_url, headers=self.headers, allow_redirects=True)  # type: ignore
+        self._verbose_print(f"GET {resolution_url}: {resolution_response.status_code}")
+        self._verbose_print(f"Resolution response status: {resolution_response.status_code}")
+        resolution_response.raise_for_status()
+        resolution_data = parse_jsonc(resolution_response.text)
+        self._verbose_print(f"Resolution data contains {len(resolution_data)} packages")
+        
+        # Check if package name needs to be resolved from alias to actual package name
+        self._verbose_print(f"Checking if '{package_name}' is an alias")
+        resolved_package = None
+        for actual_package, aliases in resolution_data.items():
+            if package_name in aliases:
+                resolved_package = actual_package
+                print(f"{Fore.BLUE}Resolving alias '{Fore.YELLOW}{package_name}{Fore.BLUE}' to '{Fore.CYAN}{resolved_package}{Fore.BLUE}'")
+                package_name = resolved_package
+                break
+            
+        if package_name == "com.mralfiem591.paxd":
+            print(f"{Fore.RED}Cannot uninstall PaxD itself using PaxD. Please uninstall manually.")
+            return
+
+        # Fetch package metadata
+        self._verbose_print(f"Fetching package metadata for uninstall: {package_name}")
+        package_data, source_file = self._fetch_package_metadata(repo_url, package_name)
+        self._verbose_print(f"Successfully fetched metadata from {source_file}")
+        
+        # Check if package is actually installed
+        package_install_path = os.path.join(local_app_data, package_name)
+        if not os.path.exists(package_install_path):
+            if os.path.exists(os.path.join(os.path.dirname(os.path.abspath(__file__)), "bin", f"{package_data.get('install', {}).get('alias', package_name)}.bat")):
+                print(f"{Fore.YELLOW}Package '{Fore.CYAN}{package_name}{Fore.YELLOW}' is already not installed, but found leftover files. Cleaning up...")
+                os.remove(os.path.join(os.path.dirname(os.path.abspath(__file__)), "bin", f"{package_data.get('install', {}).get('alias', package_name)}.bat"))
+            print(f"{Fore.YELLOW}Package '{Fore.CYAN}{package_name}{Fore.YELLOW}' is already not installed.")
+            return
+        
+        pkg_name_friendly = f"{Fore.GREEN}{package_data.get('pkg_info', {}).get('pkg_name', package_name)}{Style.RESET_ALL}, by {Fore.MAGENTA}{package_data.get('pkg_info', {}).get('pkg_author', 'Unknown Author')}{Style.RESET_ALL} ({Fore.BLUE}{package_data.get('pkg_info', {}).get('pkg_version', 'Unknown Version')}{Style.RESET_ALL})"
+        print(f"{Fore.CYAN}Retrieved package metadata for '{pkg_name_friendly}'")
+        
+        # Remove the bat file from bin, if it exists
+        bat_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bin", f"{package_data.get('install', {}).get('alias', package_name)}.bat")
+        if os.path.exists(bat_file_path):
+            os.remove(bat_file_path)
+            print(f"{Fore.RED}Deleted {bat_file_path}")
+
+        # If package_data[uninstall][file] exists and has a value, run that file in a new shell window, closing it once it's done
+        uninstall_file = package_data.get("uninstall", {}).get("file")
+        if uninstall_file:
+            uninstall_file_path = os.path.join(local_app_data, package_name, uninstall_file)
+            if os.path.exists(uninstall_file_path) and uninstall_file.endswith(".py"):
+                print(f"{Fore.YELLOW}Running uninstall script {Fore.CYAN}{uninstall_file_path}{Fore.YELLOW}... Note that you may need to take action in another terminal window.")
+                self._verbose_print(f"Running uninstall script: {uninstall_file_path} in new cmd window")
+                subprocess.run(f"start cmd /c python {uninstall_file_path}", shell=True)
+                # Wait until the uninstall script is completed
+                input(f"{Fore.YELLOW}Press Enter once the uninstall script has completed (other window will close)...")
+                self._verbose_print("Uninstall script completed")
+        
+        # Clean up dependencies before deleting the package
+        deps_file = os.path.join(local_app_data, package_name, ".DEPENDENCIES")
+        if os.path.exists(deps_file):
+            with open(deps_file, 'r') as f:
+                for line in f:
+                    dep = line.strip()
+                    if dep and dep.startswith("paxd:"):
+                        paxd_package = dep[len("paxd:"):]
+                        self._remove_dependency_reference(paxd_package, package_name)
+                
+        # Now for the fun part - deleting the package folder from %LOCALAPPDATA%/<package_name>
+        self._verbose_print(f"Deleting package folder: {package_name} at {package_install_path}")
+        package_folder = os.path.join(local_app_data, package_name)
+        if os.path.exists(package_folder):
+            shutil.rmtree(package_folder, onerror=permission_handler)
+            # Check package folder is deleted
+            if not os.path.exists(package_folder):
+                print(f"{Fore.GREEN}✓ Successfully uninstalled '{Fore.CYAN}{package_name}{Fore.GREEN}' - deleted package folder {package_folder}")
+                self._verbose_print(f"Successfully uninstalled package: {package_name}")
             else:
-                print(f"{Fore.RED}HTTP error: {e}")
-        except requests.RequestException as e:
-            self._verbose_print(f"RequestException in uninstall: {e}")
-            self._verbose_timing_end(f"uninstall {package_name}")
-            print(f"{Fore.RED}Network error: {e}")
-        except Exception as e:
-            self._verbose_print(f"Unexpected error in uninstall: {e}")
-            self._verbose_timing_end(f"uninstall {package_name}")
-            print(f"{Fore.RED}Unexpected error: {e}")
+                print(f"{Fore.RED}Failed to delete package folder {package_folder}")
+                self._verbose_print(f"Failed to delete package folder: {package_folder}")
 
     def update(self, package_name=None, force=False, skip_checksum=False): # type: ignore
         """Update a package to the latest version."""
@@ -1306,317 +1212,278 @@ class PaxD:
         print(f"{Fore.BLUE}Updating {Fore.CYAN}{package_name}{Fore.BLUE}...")
         
         backup_files = []  # Track backup files for cleanup on success or failure
-        try:
-            # Read and resolve repository URL
-            self._verbose_print("Reading and resolving repository URL for update")
-            repo_url = self._read_repository_url()
-            repo_url = self._resolve_repository_url(repo_url)
-            local_app_data = os.path.join(os.path.expandvars(r"%LOCALAPPDATA%"), "PaxD")
-            self._verbose_print(f"Local app data directory: {local_app_data}")
+        # Read and resolve repository URL
+        self._verbose_print("Reading and resolving repository URL for update")
+        repo_url = self._read_repository_url()
+        repo_url = self._resolve_repository_url(repo_url)
+        local_app_data = os.path.join(os.path.expandvars(r"%LOCALAPPDATA%"), "PaxD")
+        self._verbose_print(f"Local app data directory: {local_app_data}")
+        
+        # Check if this is a metapackage
+        if self._is_metapackage(package_name):
+            self._verbose_print(f"Detected metapackage for update: {package_name}")
+            print(f"{Fore.CYAN}Updating metapackage {Fore.YELLOW}{package_name}{Fore.CYAN}...")
             
-            # Check if this is a metapackage
-            if self._is_metapackage(package_name):
-                self._verbose_print(f"Detected metapackage for update: {package_name}")
-                print(f"{Fore.CYAN}Updating metapackage {Fore.YELLOW}{package_name}{Fore.CYAN}...")
-                
-                # Fetch the list of packages from the metapackage
-                try:
-                    package_list = self._fetch_metapackage_data(repo_url, package_name)
-                except FileNotFoundError as e:
-                    self._verbose_print(f"Metapackage not found: {e}")
-                    self._verbose_timing_end(f"update {package_name}")
-                    print(f"{Fore.RED}Error: {e}")
-                    return
-                
-                print(f"{Fore.GREEN}Metapackage contains {len(package_list)} packages:")
-                for pkg in package_list:
-                    print(f"  - {Fore.CYAN}{pkg}")
-                print()
-                
-                # Update each package in the metapackage
-                updated_packages = []
-                failed_packages = []
-                
-                for pkg in package_list:
-                    try:
-                        print(f"{Fore.BLUE}Updating package {Fore.YELLOW}{pkg}{Fore.BLUE} from metapackage...")
-                        self.update(pkg, force=force, skip_checksum=skip_checksum)
-                        updated_packages.append(pkg)
-                    except Exception as e:
-                        self._verbose_print(f"Failed to update package {pkg} from metapackage: {e}")
-                        print(f"{Fore.RED}Failed to update {Fore.YELLOW}{pkg}{Fore.RED}: {e}")
-                        failed_packages.append(pkg)
-                
+            # Fetch the list of packages from the metapackage
+            try:
+                package_list = self._fetch_metapackage_data(repo_url, package_name)
+            except FileNotFoundError as e:
+                self._verbose_print(f"Metapackage not found: {e}")
                 self._verbose_timing_end(f"update {package_name}")
-                
-                # Report results
-                if updated_packages:
-                    print(f"\n{Fore.GREEN}✓ Metapackage {Fore.YELLOW}{package_name}{Fore.GREEN} updated successfully!")
-                    print(f"{Fore.GREEN}Updated packages: {Fore.CYAN}{', '.join(updated_packages)}")
-                
-                if failed_packages:
-                    print(f"{Fore.RED}Failed to update: {Fore.YELLOW}{', '.join(failed_packages)}")
-                    
-                return
-
-            # GET {repo_url}/resolution to resolve aliases
-            resolution_url = f"{repo_url}/resolution"
-            resolution_response = requests.get(resolution_url, headers=self.headers, allow_redirects=True)  # type: ignore
-            self._verbose_print(f"GET {resolution_url}: {resolution_response.status_code}")
-            resolution_response.raise_for_status()
-            resolution_data = parse_jsonc(resolution_response.text)
-            
-            # Check if package name needs to be resolved from alias to actual package name
-            original_package_name = package_name
-            for actual_package, aliases in resolution_data.items():
-                if package_name in aliases:
-                    print(f"{Fore.BLUE}Resolving alias '{Fore.YELLOW}{package_name}{Fore.BLUE}' to '{Fore.CYAN}{actual_package}{Fore.BLUE}'")
-                    package_name = actual_package
-                    break
-            
-            # Check if package is currently installed
-            package_install_path = os.path.join(local_app_data, package_name)
-            if not os.path.exists(package_install_path):
-                print(f"{Fore.RED}Package '{Fore.CYAN}{original_package_name}{Fore.RED}' is not installed. Use '{Fore.GREEN}paxd install {original_package_name}{Fore.RED}' to install it.")
+                print(f"{Fore.RED}Error: {e}")
                 return
             
-            # Special handling for updating PaxD itself
-            if package_name == "com.mralfiem591.paxd":
-                print(f"{Fore.YELLOW}Warning: Self-updating PaxD requires careful handling.")
-                print(f"{Fore.YELLOW}The update will download new files and may require a restart of PaxD.")
-                print(f"{Fore.GREEN}Although, you can normally ignore this. Careful measures are taken to prevent corruption, and there is only a miniscule chance of failure.")
-                print(f"{Fore.LIGHTYELLOW_EX}In the event of failure, try running the installer via the one-liner on the PaxD website, as it can detect, flag, and repair most problems.")
-                
-            # Get current installed version (if available)
-            current_version = None
-            version_file = os.path.join(package_install_path, ".VERSION")
-            if os.path.exists(version_file):
-                with open(version_file, 'r') as f:
-                    current_version = f.read().strip()
+            print(f"{Fore.GREEN}Metapackage contains {len(package_list)} packages:")
+            for pkg in package_list:
+                print(f"  - {Fore.CYAN}{pkg}")
+            print()
             
-            # Fetch latest package metadata
-            self._verbose_print(f"Fetching latest package metadata for: {package_name}")
-            package_data, source_file = self._fetch_package_metadata(repo_url, package_name)
-            self._verbose_print(f"Successfully fetched metadata from {source_file}")
-            if source_file == "paxd.yaml":
-                print(f"{Fore.GREEN}Using YAML package configuration")
+            # Update each package in the metapackage
+            updated_packages = []
+            failed_packages = []
             
-            # Get latest version from repository
-            latest_version = package_data.get('pkg_info', {}).get('pkg_version', 'Unknown')
-            pkg_name_friendly = f"{package_data.get('pkg_info', {}).get('pkg_name', package_name)}, by {package_data.get('pkg_info', {}).get('pkg_author', 'Unknown Author')}"
-            
-            print(f"{Fore.WHITE}Current version: {Fore.RED}{current_version or 'Unknown'}")
-            print(f"{Fore.WHITE}Latest version: {Fore.GREEN}{latest_version}")
-            
-            # Check if update is needed
-            if current_version == latest_version and not force:
-                print(f"{Fore.GREEN}Package '{pkg_name_friendly}' is already up to date.")
-                return
-            
-            print(f"{Fore.BLUE}Updating '{pkg_name_friendly}' from {Fore.RED}{current_version or 'Unknown'}{Fore.BLUE} to {Fore.GREEN}{latest_version}")
-            
-            # Handle dependencies (both new and existing)
-            current_dependencies = set()
-            for dep in package_data.get("install", {}).get("depend", []):
-                current_dependencies.add(dep)
+            for pkg in package_list:
                 try:
-                    # Dependency begins with "pip:": use pip to install
-                    if dep.startswith("pip:"):
-                        pip_package = dep[len("pip:"):]
-                        if pip_package == "uv":
-                            print(f"{Fore.RED}Skipped: UV: cannot update UV with UV, as pipx handles that")
-                            continue
-                        PIP_PACKAGES.append(pip_package)
-                    # Dependency begins with "winget": use winget to install
-                    elif dep.startswith("winget:"):
-                        winget_package = dep[len("winget:"):]
-                        print(f"Installing/updating Windows package '{winget_package}' via winget")
-                        os.system(f"winget install {winget_package}")
-                    # Dependency begins with "choco:": use choco to install
-                    elif dep.startswith("choco:"):
-                        choco_package = dep[len("choco:"):]
-                        print(f"Installing/updating Chocolatey package '{choco_package}' via choco")
-                        os.system(f"choco upgrade {choco_package}")
-                    # Dependency begins with "npm:": use npm to install
-                    elif dep.startswith("npm:"):
-                        npm_package = dep[len("npm:"):]
-                        print(f"Installing/updating Node.js package '{npm_package}' via npm")
-                        os.system(f"npm install {npm_package}")
-                    # Dependency begins with "paxd:": check if installed, then install or update
-                    elif dep.startswith("paxd:"):
-                        paxd_package = dep[len("paxd:"):]
-                        paxd_dep_path = os.path.join(local_app_data, paxd_package)
-                        if os.path.exists(paxd_dep_path):
-                            print(f"Updating PaxD dependency '{paxd_package}'")
-                            self.update(paxd_package)
-                        else:
-                            print(f"Installing new PaxD dependency '{paxd_package}'")
-                            self.install(paxd_package, user_requested=False)
-                            # Mark this package as a dependency
-                            self._mark_as_dependency(paxd_package, package_name)
-                    else:
-                        print(f"Unknown dependency type for '{dep}'")
+                    print(f"{Fore.BLUE}Updating package {Fore.YELLOW}{pkg}{Fore.BLUE} from metapackage...")
+                    self.update(pkg, force=force, skip_checksum=skip_checksum)
+                    updated_packages.append(pkg)
                 except Exception as e:
-                    print(f"Warning: Failed to handle dependency '{dep}': {e}")
-                    
-            if PIP_PACKAGES:
-                # Install all at once
-                print(f"{Fore.CYAN}Installing/updating all Python packages via pip: {', '.join(PIP_PACKAGES)}")
-                pip_install_command = ['uv', 'pip', 'install', '--system', '--python', sys.executable] + PIP_PACKAGES
-                result = subprocess.run(pip_install_command)
-                if result.returncode != 0:
-                    raise DependencyError("Failed to install/update one or more pip packages")
-                PIP_PACKAGES.clear()  # Clear after installation/update
+                    self._verbose_print(f"Failed to update package {pkg} from metapackage: {e}")
+                    print(f"{Fore.RED}Failed to update {Fore.YELLOW}{pkg}{Fore.RED}: {e}")
+                    failed_packages.append(pkg)
             
-            # Check for orphaned dependencies (packages that were dependencies but are no longer needed)
-            self._cleanup_orphaned_dependencies(package_name, current_dependencies)
+            self._verbose_timing_end(f"update {package_name}")
             
-            # Update files from the include list
-            # update-ex: array of filenames from include list to skip during updates
-            # Useful for config files or user-modified files that shouldn't be overwritten
-            updated_files = []
-            excluded_files = package_data.get("install", {}).get("update-ex", [])
+            # Report results
+            if updated_packages:
+                print(f"\n{Fore.GREEN}✓ Metapackage {Fore.YELLOW}{package_name}{Fore.GREEN} updated successfully!")
+                print(f"{Fore.GREEN}Updated packages: {Fore.CYAN}{', '.join(updated_packages)}")
             
-            for file in package_data.get("install", {}).get("include", []):
-                # Check if this file is excluded from updates
-                if file in excluded_files:
-                    print(f"Skipping update of '{file}' (excluded by update-ex)")
-                    continue
-                    
-                file_url = f"{repo_url}/packages/{package_name}/src/{file}"
-                file_response = requests.get(file_url, headers=self.headers, allow_redirects=True)  # type: ignore
-                self._verbose_print(f"GET {file_url}: {file_response.status_code}")
-                file_response.raise_for_status()
-                file_data = file_response.content
+            if failed_packages:
+                print(f"{Fore.RED}Failed to update: {Fore.YELLOW}{', '.join(failed_packages)}")
                 
-                # Update the file
-                install_path = os.path.join(local_app_data, package_name, file)
-                os.makedirs(os.path.dirname(install_path), exist_ok=True)
-                
-                # Backup existing file if it exists
-                backup_path = f"{install_path}.backup"
-                if os.path.exists(install_path):
-                    shutil.copy2(install_path, backup_path)
-                    backup_files.append(backup_path)
-                
-                with open(install_path, 'wb') as f:
-                    f.write(file_data)
-                    
-                updated_files.append(file)
-                
-                # Verify checksum if provided
-                expected_checksum = package_data.get("install", {}).get("checksum", {}).get(file)
-                if expected_checksum and not skip_checksum:
-                    # Also calculate checksum of the raw downloaded data for debugging
-                    raw_checksum = f"sha256:{hashlib.sha256(file_data).hexdigest()}"
-                    # Verify the checksum
-                    sha256 = hashlib.sha256()
-                    with open(install_path, "rb") as f:
-                        while True:
-                            chunk: bytes = f.read(4096)
-                            if not chunk:
-                                break
-                            sha256.update(chunk)
-                    calculated_checksum = f"sha256:{sha256.hexdigest()}"
-                    
-                    if calculated_checksum == expected_checksum:
-                        print(f"Checksum verified for {file}")
-                        # Remove backup if checksum is correct
-                        if os.path.exists(backup_path):
-                            os.remove(backup_path)
-                            backup_files.remove(backup_path) if backup_path in backup_files else None
+            return
+
+        # GET {repo_url}/resolution to resolve aliases
+        resolution_url = f"{repo_url}/resolution"
+        resolution_response = requests.get(resolution_url, headers=self.headers, allow_redirects=True)  # type: ignore
+        self._verbose_print(f"GET {resolution_url}: {resolution_response.status_code}")
+        resolution_response.raise_for_status()
+        resolution_data = parse_jsonc(resolution_response.text)
+        
+        # Check if package name needs to be resolved from alias to actual package name
+        original_package_name = package_name
+        for actual_package, aliases in resolution_data.items():
+            if package_name in aliases:
+                print(f"{Fore.BLUE}Resolving alias '{Fore.YELLOW}{package_name}{Fore.BLUE}' to '{Fore.CYAN}{actual_package}{Fore.BLUE}'")
+                package_name = actual_package
+                break
+        
+        # Check if package is currently installed
+        package_install_path = os.path.join(local_app_data, package_name)
+        if not os.path.exists(package_install_path):
+            print(f"{Fore.RED}Package '{Fore.CYAN}{original_package_name}{Fore.RED}' is not installed. Use '{Fore.GREEN}paxd install {original_package_name}{Fore.RED}' to install it.")
+            return
+        
+        # Special handling for updating PaxD itself
+        if package_name == "com.mralfiem591.paxd":
+            print(f"{Fore.YELLOW}Warning: Self-updating PaxD requires careful handling.")
+            print(f"{Fore.YELLOW}The update will download new files and may require a restart of PaxD.")
+            print(f"{Fore.GREEN}Although, you can normally ignore this. Careful measures are taken to prevent corruption, and there is only a miniscule chance of failure.")
+            print(f"{Fore.LIGHTYELLOW_EX}In the event of failure, try running the installer via the one-liner on the PaxD website, as it can detect, flag, and repair most problems.")
+            
+        # Get current installed version (if available)
+        current_version = None
+        version_file = os.path.join(package_install_path, ".VERSION")
+        if os.path.exists(version_file):
+            with open(version_file, 'r') as f:
+                current_version = f.read().strip()
+        
+        # Fetch latest package metadata
+        self._verbose_print(f"Fetching latest package metadata for: {package_name}")
+        package_data, source_file = self._fetch_package_metadata(repo_url, package_name)
+        self._verbose_print(f"Successfully fetched metadata from {source_file}")
+        if source_file == "paxd.yaml":
+            print(f"{Fore.GREEN}Using YAML package configuration")
+        
+        # Get latest version from repository
+        latest_version = package_data.get('pkg_info', {}).get('pkg_version', 'Unknown')
+        pkg_name_friendly = f"{package_data.get('pkg_info', {}).get('pkg_name', package_name)}, by {package_data.get('pkg_info', {}).get('pkg_author', 'Unknown Author')}"
+        
+        print(f"{Fore.WHITE}Current version: {Fore.RED}{current_version or 'Unknown'}")
+        print(f"{Fore.WHITE}Latest version: {Fore.GREEN}{latest_version}")
+        
+        # Check if update is needed
+        if current_version == latest_version and not force:
+            print(f"{Fore.GREEN}Package '{pkg_name_friendly}' is already up to date.")
+            return
+        
+        print(f"{Fore.BLUE}Updating '{pkg_name_friendly}' from {Fore.RED}{current_version or 'Unknown'}{Fore.BLUE} to {Fore.GREEN}{latest_version}")
+        
+        # Handle dependencies (both new and existing)
+        current_dependencies = set()
+        for dep in package_data.get("install", {}).get("depend", []):
+            current_dependencies.add(dep)
+            try:
+                # Dependency begins with "pip:": use pip to install
+                if dep.startswith("pip:"):
+                    pip_package = dep[len("pip:"):]
+                    if pip_package == "uv":
+                        print(f"{Fore.RED}Skipped: UV: cannot update UV with UV, as pipx handles that")
+                        continue
+                    PIP_PACKAGES.append(pip_package)
+                # Dependency begins with "winget": use winget to install
+                elif dep.startswith("winget:"):
+                    winget_package = dep[len("winget:"):]
+                    print(f"Installing/updating Windows package '{winget_package}' via winget")
+                    os.system(f"winget install {winget_package}")
+                # Dependency begins with "choco:": use choco to install
+                elif dep.startswith("choco:"):
+                    choco_package = dep[len("choco:"):]
+                    print(f"Installing/updating Chocolatey package '{choco_package}' via choco")
+                    os.system(f"choco upgrade {choco_package}")
+                # Dependency begins with "npm:": use npm to install
+                elif dep.startswith("npm:"):
+                    npm_package = dep[len("npm:"):]
+                    print(f"Installing/updating Node.js package '{npm_package}' via npm")
+                    os.system(f"npm install {npm_package}")
+                # Dependency begins with "paxd:": check if installed, then install or update
+                elif dep.startswith("paxd:"):
+                    paxd_package = dep[len("paxd:"):]
+                    paxd_dep_path = os.path.join(local_app_data, paxd_package)
+                    if os.path.exists(paxd_dep_path):
+                        print(f"Updating PaxD dependency '{paxd_package}'")
+                        self.update(paxd_package)
                     else:
-                        print(f"Checksum mismatch for {file}: {calculated_checksum} != {expected_checksum}")
-                        self._verbose_print(f"Checksum verification failed for {file}: {calculated_checksum} != {expected_checksum}")
-                        # Restore from backup
-                        if os.path.exists(backup_path):
-                            shutil.copy2(backup_path, install_path)
-                            os.remove(backup_path)
-                            backup_files.remove(backup_path) if backup_path in backup_files else None
-                            print(f"Restored {file} from backup due to checksum failure")
-                            # Remove from updated_files since it was restored
-                            updated_files.remove(file) if file in updated_files else None
-                        else:
-                            os.remove(install_path)
-                            print(f"Deleted invalid file {file}")
-                            # Remove from updated_files since it was deleted
-                            updated_files.remove(file) if file in updated_files else None
+                        print(f"Installing new PaxD dependency '{paxd_package}'")
+                        self.install(paxd_package, user_requested=False)
+                        # Mark this package as a dependency
+                        self._mark_as_dependency(paxd_package, package_name)
                 else:
-                    print(f"No checksum verification required for {file}")
-            
-            # Clean up any remaining backup files (for files without checksums or after successful updates)
-            cleaned_backups = self._cleanup_backup_files(backup_files, "successful update")
-            
-            if cleaned_backups > 0:
-                print(f"Removed {cleaned_backups} backup file(s)")
-            
-            # Update the version file
-            version_file = os.path.join(package_install_path, ".VERSION")
-            with open(version_file, 'w') as f:
-                f.write(latest_version)
-            
-            # Handle updaterun flag
-            if package_data.get("install", {}).get("updaterun"):
-                updaterun_path = os.path.join(local_app_data, package_name, ".UPDATERUN")
-                with open(updaterun_path, 'w') as f:
-                    f.write("This file indicates that the package has been updated and may need special handling.")
-                print(f"Created .UPDATERUN file at {updaterun_path}")
-            
-            # Update batch file if mainfile exists (in case alias or mainfile changed)
-            mainfile = package_data.get("install", {}).get("mainfile")
-            if mainfile:
-                alias = package_data.get("install", {}).get("alias", mainfile.split(".")[0])
-                bat_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bin", f"{alias}.bat")
+                    print(f"Unknown dependency type for '{dep}'")
+            except Exception as e:
+                print(f"Warning: Failed to handle dependency '{dep}': {e}")
                 
-                # Update the batch file content
-                with open(bat_file_path, 'w') as f:
-                    f.write(f"@echo off\n")
-                    f.write(f'"{sys.executable}" "{os.path.join(local_app_data, "com.mralfiem591.paxd", "run_pkg.py")}" "{os.path.join(local_app_data, package_name, mainfile)}" %*\n')
-                print(f"Updated batch file at {bat_file_path}")
-            
-            print(f"{Fore.GREEN}✓ Successfully updated '{pkg_name_friendly}' to version {Fore.CYAN}{latest_version}{Style.RESET_ALL}")
-            if updated_files:
-                print(f"{Fore.BLUE}Updated files: {Fore.WHITE}{', '.join(updated_files)}")
-            if excluded_files:
-                print(f"{Fore.YELLOW}Excluded from update: {Fore.WHITE}{', '.join(excluded_files)}")
+        if PIP_PACKAGES:
+            # Install all at once
+            print(f"{Fore.CYAN}Installing/updating all Python packages via pip: {', '.join(PIP_PACKAGES)}")
+            pip_install_command = ['uv', 'pip', 'install', '--system', '--python', sys.executable] + PIP_PACKAGES
+            result = subprocess.run(pip_install_command)
+            if result.returncode != 0:
+                raise DependencyError("Failed to install/update one or more pip packages")
+            PIP_PACKAGES.clear()  # Clear after installation/update
+        
+        # Check for orphaned dependencies (packages that were dependencies but are no longer needed)
+        self._cleanup_orphaned_dependencies(package_name, current_dependencies)
+        
+        # Update files from the include list
+        # update-ex: array of filenames from include list to skip during updates
+        # Useful for config files or user-modified files that shouldn't be overwritten
+        updated_files = []
+        excluded_files = package_data.get("install", {}).get("update-ex", [])
+        
+        for file in package_data.get("install", {}).get("include", []):
+            # Check if this file is excluded from updates
+            if file in excluded_files:
+                print(f"Skipping update of '{file}' (excluded by update-ex)")
+                continue
                 
-        except FileNotFoundError as e:
-            self._verbose_print(f"FileNotFoundError in update: {e}")
-            self._verbose_timing_end(f"update {package_name}")
-            error_msg = str(e)
-            if "not found in repository" in error_msg:
-                print(f"{Fore.RED}Package '{Fore.YELLOW}{package_name}{Fore.RED}' was not found in the repository.")
-                print(f"{Fore.YELLOW}The package might have been removed from the repository or renamed.")
-                print(f"{Fore.CYAN}Try searching for similar packages with: {Fore.GREEN}paxd search {package_name}")
+            file_url = f"{repo_url}/packages/{package_name}/src/{file}"
+            file_response = requests.get(file_url, headers=self.headers, allow_redirects=True)  # type: ignore
+            self._verbose_print(f"GET {file_url}: {file_response.status_code}")
+            file_response.raise_for_status()
+            file_data = file_response.content
+            
+            # Update the file
+            install_path = os.path.join(local_app_data, package_name, file)
+            os.makedirs(os.path.dirname(install_path), exist_ok=True)
+            
+            # Backup existing file if it exists
+            backup_path = f"{install_path}.backup"
+            if os.path.exists(install_path):
+                shutil.copy2(install_path, backup_path)
+                backup_files.append(backup_path)
+            
+            with open(install_path, 'wb') as f:
+                f.write(file_data)
+                
+            updated_files.append(file)
+            
+            # Verify checksum if provided
+            expected_checksum = package_data.get("install", {}).get("checksum", {}).get(file)
+            if expected_checksum and not skip_checksum:
+                # Also calculate checksum of the raw downloaded data for debugging
+                raw_checksum = f"sha256:{hashlib.sha256(file_data).hexdigest()}"
+                # Verify the checksum
+                sha256 = hashlib.sha256()
+                with open(install_path, "rb") as f:
+                    while True:
+                        chunk: bytes = f.read(4096)
+                        if not chunk:
+                            break
+                        sha256.update(chunk)
+                calculated_checksum = f"sha256:{sha256.hexdigest()}"
+                
+                if calculated_checksum == expected_checksum:
+                    print(f"Checksum verified for {file}")
+                    # Remove backup if checksum is correct
+                    if os.path.exists(backup_path):
+                        os.remove(backup_path)
+                        backup_files.remove(backup_path) if backup_path in backup_files else None
+                else:
+                    print(f"Checksum mismatch for {file}: {calculated_checksum} != {expected_checksum}")
+                    self._verbose_print(f"Checksum verification failed for {file}: {calculated_checksum} != {expected_checksum}")
+                    # Restore from backup
+                    if os.path.exists(backup_path):
+                        shutil.copy2(backup_path, install_path)
+                        os.remove(backup_path)
+                        backup_files.remove(backup_path) if backup_path in backup_files else None
+                        print(f"Restored {file} from backup due to checksum failure")
+                        # Remove from updated_files since it was restored
+                        updated_files.remove(file) if file in updated_files else None
+                    else:
+                        os.remove(install_path)
+                        print(f"Deleted invalid file {file}")
+                        # Remove from updated_files since it was deleted
+                        updated_files.remove(file) if file in updated_files else None
             else:
-                print(f"{Fore.RED}Error: {error_msg}")
-            # Clean up backup files on error
-            self._cleanup_backup_files(backup_files, "error cleanup")
-        except requests.HTTPError as e:
-            self._verbose_print(f"HTTPError in update: {e}")
-            self._verbose_timing_end(f"update {package_name}")
-            if hasattr(e, 'response') and e.response.status_code == 404:
-                print(f"{Fore.RED}Package '{Fore.YELLOW}{package_name}{Fore.RED}' was not found in the repository.")
-                print(f"{Fore.YELLOW}The package might have been removed from the repository or renamed.")
-                print(f"{Fore.CYAN}Try searching for similar packages with: {Fore.GREEN}paxd search {package_name}")
-            else:
-                print(f"{Fore.RED}HTTP error: {e}")
-            # Clean up backup files on error
-            self._cleanup_backup_files(backup_files, "error cleanup")
-        except requests.RequestException as e:
-            self._verbose_print(f"RequestException in update: {e}")
-            self._verbose_timing_end(f"update {package_name}")
-            print(f"{Fore.RED}Network error: {e}")
-            # Clean up backup files on error
-            self._cleanup_backup_files(backup_files, "error cleanup")
-        except json.JSONDecodeError as e:
-            print(f"JSON parsing error: {e}")
-            # Clean up backup files on error
-            self._cleanup_backup_files(backup_files, "error cleanup")
-        except Exception as e:
-            print(f"Unexpected error during update: {e}")
-            # Clean up backup files on error
-            self._cleanup_backup_files(backup_files, "error cleanup")
+                print(f"No checksum verification required for {file}")
+        
+        # Clean up any remaining backup files (for files without checksums or after successful updates)
+        cleaned_backups = self._cleanup_backup_files(backup_files, "successful update")
+        
+        if cleaned_backups > 0:
+            print(f"Removed {cleaned_backups} backup file(s)")
+        
+        # Update the version file
+        version_file = os.path.join(package_install_path, ".VERSION")
+        with open(version_file, 'w') as f:
+            f.write(latest_version)
+        
+        # Handle updaterun flag
+        if package_data.get("install", {}).get("updaterun"):
+            updaterun_path = os.path.join(local_app_data, package_name, ".UPDATERUN")
+            with open(updaterun_path, 'w') as f:
+                f.write("This file indicates that the package has been updated and may need special handling.")
+            print(f"Created .UPDATERUN file at {updaterun_path}")
+        
+        # Update batch file if mainfile exists (in case alias or mainfile changed)
+        mainfile = package_data.get("install", {}).get("mainfile")
+        if mainfile:
+            alias = package_data.get("install", {}).get("alias", mainfile.split(".")[0])
+            bat_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bin", f"{alias}.bat")
+            
+            # Update the batch file content
+            with open(bat_file_path, 'w') as f:
+                f.write(f"@echo off\n")
+                f.write(f'"{sys.executable}" "{os.path.join(local_app_data, "com.mralfiem591.paxd", "run_pkg.py")}" "{os.path.join(local_app_data, package_name, mainfile)}" %*\n')
+            print(f"Updated batch file at {bat_file_path}")
+        
+        print(f"{Fore.GREEN}✓ Successfully updated '{pkg_name_friendly}' to version {Fore.CYAN}{latest_version}{Style.RESET_ALL}")
+        if updated_files:
+            print(f"{Fore.BLUE}Updated files: {Fore.WHITE}{', '.join(updated_files)}")
+        if excluded_files:
+            print(f"{Fore.YELLOW}Excluded from update: {Fore.WHITE}{', '.join(excluded_files)}")
             
     def list_installed(self):
         """List all installed packages with their versions."""
@@ -1658,195 +1525,170 @@ class PaxD:
         self._verbose_timing_start(f"info {package_name}")
         self._verbose_print(f"Getting info for package: {package_name}")
         
-        try:
-            # Read and resolve repository URL
-            self._verbose_print("Reading and resolving repository URL for info")
-            repo_url = self._read_repository_url()
-            repo_url = self._resolve_repository_url(repo_url)
-            local_app_data = os.path.join(os.path.expandvars(r"%LOCALAPPDATA%"), "PaxD")
-            self._verbose_print(f"Local app data directory: {local_app_data}")
+        # Read and resolve repository URL
+        self._verbose_print("Reading and resolving repository URL for info")
+        repo_url = self._read_repository_url()
+        repo_url = self._resolve_repository_url(repo_url)
+        local_app_data = os.path.join(os.path.expandvars(r"%LOCALAPPDATA%"), "PaxD")
+        self._verbose_print(f"Local app data directory: {local_app_data}")
+        
+        # GET {repo_url}/resolution to resolve aliases
+        resolution_url = f"{repo_url}/resolution"
+        self._verbose_print(f"Fetching resolution data from: {resolution_url}")
+        resolution_response = requests.get(resolution_url, headers=self.headers, allow_redirects=True)  # type: ignore
+        self._verbose_print(f"GET {resolution_url}: {resolution_response.status_code}")
+        self._verbose_print(f"Resolution response status: {resolution_response.status_code}")
+        resolution_response.raise_for_status()
+        resolution_data = parse_jsonc(resolution_response.text)
+        self._verbose_print(f"Resolution data contains {len(resolution_data)} packages")
+        
+        # Check if package name needs to be resolved from alias to actual package name
+        original_package_name = package_name
+        resolved_from_alias = False
+        for actual_package, aliases in resolution_data.items():
+            if package_name in aliases:
+                package_name = actual_package
+                resolved_from_alias = True
+                break
+        
+        # Fetch package metadata (try both paxd and paxd.yaml)
+        self._verbose_print(f"Fetching package metadata for info: {package_name}")
+        package_data, source_file = self._fetch_package_metadata(repo_url, package_name)
+        self._verbose_print(f"Successfully fetched metadata from {source_file}")
+        if source_file == "paxd.yaml":
+            print(f"{Fore.GREEN}Package uses YAML configuration format")
+        
+        # Check if package is installed
+        package_install_path = os.path.join(local_app_data, package_name)
+        is_installed = os.path.exists(package_install_path)
+        installed_version = None
+        is_user_installed = False
+        
+        if is_installed:
+            # Get installed version
+            version_file = os.path.join(package_install_path, ".VERSION")
+            if os.path.exists(version_file):
+                with open(version_file, 'r') as f:
+                    installed_version = f.read().strip()
             
-            # GET {repo_url}/resolution to resolve aliases
-            resolution_url = f"{repo_url}/resolution"
-            self._verbose_print(f"Fetching resolution data from: {resolution_url}")
-            resolution_response = requests.get(resolution_url, headers=self.headers, allow_redirects=True)  # type: ignore
-            self._verbose_print(f"GET {resolution_url}: {resolution_response.status_code}")
-            self._verbose_print(f"Resolution response status: {resolution_response.status_code}")
-            resolution_response.raise_for_status()
-            resolution_data = parse_jsonc(resolution_response.text)
-            self._verbose_print(f"Resolution data contains {len(resolution_data)} packages")
+            # Check if user-installed
+            user_installed_file = os.path.join(package_install_path, ".USER_INSTALLED")
+            is_user_installed = os.path.exists(user_installed_file)
+        
+        # Display package information
+        print(f"{Fore.BLUE}{'=' * 60}")
+        pkg_info = package_data.get('pkg_info', {})
+        
+        # Package name and version
+        pkg_name = pkg_info.get('pkg_name', package_name)
+        pkg_version = pkg_info.get('pkg_version', 'Unknown')
+        print(f"{Fore.CYAN}Package: {Fore.GREEN}{pkg_name}")
+        print(f"{Fore.WHITE}ID: {Fore.YELLOW}{package_name}")
+        
+        if resolved_from_alias:
+            print(f"{Fore.YELLOW}Alias: {Fore.MAGENTA}{original_package_name}")
+        
+        print(f"{Fore.BLUE}Version: {Fore.WHITE}{pkg_version}")
+        
+        # Author and description
+        if 'pkg_author' in pkg_info:
+            print(f"{Fore.MAGENTA}Author: {Style.RESET_ALL}{pkg_info['pkg_author']}")
+        
+        if 'pkg_description' in pkg_info:
+            print(f"{Fore.WHITE}Description: {Style.RESET_ALL}{pkg_info['pkg_description']}")
+        
+        # Installation status
+        print(f"\n{Fore.YELLOW}Installation Status:")
+        if is_installed:
+            print(f"  {Fore.GREEN}[+] Installed (version {Fore.CYAN}{installed_version or 'Unknown'}{Fore.GREEN})")
+            if is_user_installed:
+                print(f"  {Fore.GREEN}[+] User-installed (won't be auto-removed)")
+            else:
+                print(f"  {Fore.YELLOW}[!] Dependency (may be auto-removed)")
             
-            # Check if package name needs to be resolved from alias to actual package name
-            original_package_name = package_name
-            resolved_from_alias = False
-            for actual_package, aliases in resolution_data.items():
-                if package_name in aliases:
-                    package_name = actual_package
-                    resolved_from_alias = True
-                    break
+            # Check if update is available
+            if installed_version and installed_version != pkg_version:
+                print(f"  {Fore.BLUE}[*] Update available: {Fore.RED}{installed_version}{Fore.BLUE} -> {Fore.GREEN}{pkg_version}")
+            elif installed_version == pkg_version:
+                print(f"  {Fore.GREEN}[+] Up to date")
+        else:
+            print(f"  {Fore.RED}[-] Not installed")
             
-            # Fetch package metadata (try both paxd and paxd.yaml)
-            self._verbose_print(f"Fetching package metadata for info: {package_name}")
-            package_data, source_file = self._fetch_package_metadata(repo_url, package_name)
-            self._verbose_print(f"Successfully fetched metadata from {source_file}")
-            if source_file == "paxd.yaml":
-                print(f"{Fore.GREEN}Package uses YAML configuration format")
-            
-            # Check if package is installed
-            package_install_path = os.path.join(local_app_data, package_name)
-            is_installed = os.path.exists(package_install_path)
-            installed_version = None
-            is_user_installed = False
-            
-            if is_installed:
-                # Get installed version
-                version_file = os.path.join(package_install_path, ".VERSION")
-                if os.path.exists(version_file):
-                    with open(version_file, 'r') as f:
-                        installed_version = f.read().strip()
-                
-                # Check if user-installed
-                user_installed_file = os.path.join(package_install_path, ".USER_INSTALLED")
-                is_user_installed = os.path.exists(user_installed_file)
-            
-            # Display package information
-            print(f"{Fore.BLUE}{'=' * 60}")
-            pkg_info = package_data.get('pkg_info', {})
-            
-            # Package name and version
-            pkg_name = pkg_info.get('pkg_name', package_name)
-            pkg_version = pkg_info.get('pkg_version', 'Unknown')
-            print(f"{Fore.CYAN}Package: {Fore.GREEN}{pkg_name}")
-            print(f"{Fore.WHITE}ID: {Fore.YELLOW}{package_name}")
-            
-            if resolved_from_alias:
-                print(f"{Fore.YELLOW}Alias: {Fore.MAGENTA}{original_package_name}")
-            
-            print(f"{Fore.BLUE}Version: {Fore.WHITE}{pkg_version}")
-            
-            # Author and description
-            if 'pkg_author' in pkg_info:
-                print(f"{Fore.MAGENTA}Author: {Style.RESET_ALL}{pkg_info['pkg_author']}")
-            
-            if 'pkg_description' in pkg_info:
-                print(f"{Fore.WHITE}Description: {Style.RESET_ALL}{pkg_info['pkg_description']}")
-            
-            # Installation status
-            print(f"\n{Fore.YELLOW}Installation Status:")
-            if is_installed:
-                print(f"  {Fore.GREEN}[+] Installed (version {Fore.CYAN}{installed_version or 'Unknown'}{Fore.GREEN})")
-                if is_user_installed:
-                    print(f"  {Fore.GREEN}[+] User-installed (won't be auto-removed)")
+        if is_installed and not fullsize:
+            try:
+                package_size = sum(os.path.getsize(os.path.join(dirpath, filename))
+                                for dirpath, dirnames, filenames in os.walk(package_install_path)
+                                for filename in filenames)
+                print(f"  {Fore.BLUE}Size: {Fore.WHITE}{package_size / 1024:.1f} KB")
+            except:
+                pass
+        elif is_installed and fullsize:
+            try:
+                for file in os.walk(package_install_path):
+                    for filename in file[2]:
+                        if filename in [".VERSION", ".USER_INSTALLED", ".DEPENDENCIES", ".FIRSTRUN", ".UPDATERUN"]:
+                            continue
+                        filepath = os.path.join(file[0], filename)
+                        filesize = os.path.getsize(filepath)
+                        print(f"  {Fore.WHITE}{os.path.relpath(filepath, package_install_path)}: {filesize / 1024:.1f} KB")
+            except:
+                pass
+        
+        # Dependencies
+        install_info = package_data.get('install', {})
+        dependencies = install_info.get('depend', [])
+        if dependencies:
+            print(f"\n{Fore.YELLOW}Dependencies:")
+            for dep in dependencies:
+                if dep.startswith("paxd:"):
+                    paxd_dep = dep[len("paxd:"):]
+                    dep_path = os.path.join(local_app_data, paxd_dep)
+                    status = f"{Fore.GREEN}[+] installed" if os.path.exists(dep_path) else f"{Fore.RED}[-] not installed"
+                    print(f"  - {Fore.CYAN}{paxd_dep}{Style.RESET_ALL} (PaxD) - {status}")
                 else:
-                    print(f"  {Fore.YELLOW}[!] Dependency (may be auto-removed)")
-                
-                # Check if update is available
-                if installed_version and installed_version != pkg_version:
-                    print(f"  {Fore.BLUE}[*] Update available: {Fore.RED}{installed_version}{Fore.BLUE} -> {Fore.GREEN}{pkg_version}")
-                elif installed_version == pkg_version:
-                    print(f"  {Fore.GREEN}[+] Up to date")
-            else:
-                print(f"  {Fore.RED}[-] Not installed")
-                
-            if is_installed and not fullsize:
-                try:
-                    package_size = sum(os.path.getsize(os.path.join(dirpath, filename))
-                                    for dirpath, dirnames, filenames in os.walk(package_install_path)
-                                    for filename in filenames)
-                    print(f"  {Fore.BLUE}Size: {Fore.WHITE}{package_size / 1024:.1f} KB")
-                except:
-                    pass
-            elif is_installed and fullsize:
-                try:
-                    for file in os.walk(package_install_path):
-                        for filename in file[2]:
-                            if filename in [".VERSION", ".USER_INSTALLED", ".DEPENDENCIES", ".FIRSTRUN", ".UPDATERUN"]:
-                                continue
-                            filepath = os.path.join(file[0], filename)
-                            filesize = os.path.getsize(filepath)
-                            print(f"  {Fore.WHITE}{os.path.relpath(filepath, package_install_path)}: {filesize / 1024:.1f} KB")
-                except:
-                    pass
-            
-            # Dependencies
-            install_info = package_data.get('install', {})
-            dependencies = install_info.get('depend', [])
-            if dependencies:
-                print(f"\n{Fore.YELLOW}Dependencies:")
-                for dep in dependencies:
-                    if dep.startswith("paxd:"):
-                        paxd_dep = dep[len("paxd:"):]
-                        dep_path = os.path.join(local_app_data, paxd_dep)
-                        status = f"{Fore.GREEN}[+] installed" if os.path.exists(dep_path) else f"{Fore.RED}[-] not installed"
-                        print(f"  - {Fore.CYAN}{paxd_dep}{Style.RESET_ALL} (PaxD) - {status}")
-                    else:
-                        dep_type = dep.split(":")[0] if ":" in dep else "unknown"
-                        dep_name = dep.split(":", 1)[1] if ":" in dep else dep
-                        print(f"  - {Fore.WHITE}{dep_name}{Style.RESET_ALL} ({Fore.MAGENTA}{dep_type}{Style.RESET_ALL})")
-            
-            # Files included
-            included_files = install_info.get('include', [])
-            if included_files:
-                print(f"\n{Fore.BLUE}Included Files:")
-                excluded_files = install_info.get('update-ex', [])
-                for file in included_files:
-                    if file in excluded_files:
-                        print(f"  - {Fore.WHITE}{file}{Style.RESET_ALL} {Fore.YELLOW}(excluded from updates)")
-                    else:
-                        print(f"  - {Fore.WHITE}{file}")
-            
-            # Main executable
-            mainfile = install_info.get('mainfile')
-            if mainfile:
-                alias = install_info.get('alias', mainfile.split(".")[0])
-                print(f"\n{Fore.GREEN}Executable:")
-                print(f"  {Fore.WHITE}Main file: {Fore.CYAN}{mainfile}")
-                print(f"  {Fore.WHITE}Command: {Fore.GREEN}{alias}")
-            
-            # Special flags
-            special_flags = []
-            if install_info.get('firstrun'):
-                special_flags.append("Creates .FIRSTRUN marker")
-            if install_info.get('updaterun'):
-                special_flags.append("Creates .UPDATERUN marker on updates")
-            
-            if special_flags:
-                print(f"\nSpecial Features:")
-                for flag in special_flags:
-                    print(f"  - {flag}")
-            
-            # Uninstall info
-            uninstall_info = package_data.get('uninstall', {})
-            if uninstall_info.get('file'):
-                print(f"\nUninstall:")
-                print(f"  Custom uninstall script: {uninstall_info['file']}")
-            
-            print("=" * 60)
-            self._verbose_timing_end(f"info {package_name}")
-            
-        except requests.HTTPError as e:
-            self._verbose_print(f"HTTPError in info: {e}")
-            self._verbose_timing_end(f"info {package_name}")
-            if e.response.status_code == 404:
-                print(f"Package '{original_package_name}' not found in repository")
-            else:
-                print(f"HTTP error: {e}")
-        except FileNotFoundError as e:
-            self._verbose_print(f"FileNotFoundError in info: {e}")
-            self._verbose_timing_end(f"info {package_name}")
-            print(f"Error: {e}")
-        except requests.RequestException as e:
-            self._verbose_print(f"RequestException in info: {e}")
-            self._verbose_timing_end(f"info {package_name}")
-            print(f"Network error: {e}")
-        except json.JSONDecodeError as e:
-            self._verbose_print(f"JSONDecodeError in info: {e}")
-            self._verbose_timing_end(f"info {package_name}")
-            print(f"JSON parsing error: {e}")
-        except Exception as e:
-            self._verbose_print(f"Unexpected error in info: {e}")
-            self._verbose_timing_end(f"info {package_name}")
-            print(f"Unexpected error: {e}")
+                    dep_type = dep.split(":")[0] if ":" in dep else "unknown"
+                    dep_name = dep.split(":", 1)[1] if ":" in dep else dep
+                    print(f"  - {Fore.WHITE}{dep_name}{Style.RESET_ALL} ({Fore.MAGENTA}{dep_type}{Style.RESET_ALL})")
+        
+        # Files included
+        included_files = install_info.get('include', [])
+        if included_files:
+            print(f"\n{Fore.BLUE}Included Files:")
+            excluded_files = install_info.get('update-ex', [])
+            for file in included_files:
+                if file in excluded_files:
+                    print(f"  - {Fore.WHITE}{file}{Style.RESET_ALL} {Fore.YELLOW}(excluded from updates)")
+                else:
+                    print(f"  - {Fore.WHITE}{file}")
+        
+        # Main executable
+        mainfile = install_info.get('mainfile')
+        if mainfile:
+            alias = install_info.get('alias', mainfile.split(".")[0])
+            print(f"\n{Fore.GREEN}Executable:")
+            print(f"  {Fore.WHITE}Main file: {Fore.CYAN}{mainfile}")
+            print(f"  {Fore.WHITE}Command: {Fore.GREEN}{alias}")
+        
+        # Special flags
+        special_flags = []
+        if install_info.get('firstrun'):
+            special_flags.append("Creates .FIRSTRUN marker")
+        if install_info.get('updaterun'):
+            special_flags.append("Creates .UPDATERUN marker on updates")
+        
+        if special_flags:
+            print(f"\nSpecial Features:")
+            for flag in special_flags:
+                print(f"  - {flag}")
+        
+        # Uninstall info
+        uninstall_info = package_data.get('uninstall', {})
+        if uninstall_info.get('file'):
+            print(f"\nUninstall:")
+            print(f"  Custom uninstall script: {uninstall_info['file']}")
+        
+        print("=" * 60)
+        self._verbose_timing_end(f"info {package_name}")
             
     def show_repo_info(self):
         """Display information about the configured repository."""
