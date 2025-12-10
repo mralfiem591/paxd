@@ -2,7 +2,7 @@
 
 name: PaxD Hasher
 author: mralfiem591
-version: 1.0.0
+version: 1.0.1
 description: A tool for creating a "checksum" section of your PaxD package easily. Made to prepare for PaxD 26.0.12, where checksums are a requirement for all packages.
 license: MIT
 tags:

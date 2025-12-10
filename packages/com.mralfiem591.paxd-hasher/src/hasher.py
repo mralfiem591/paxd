@@ -12,8 +12,8 @@ import os
 import hashlib
 import sys
 
-if len(sys.argv) != 2:
-    print("Usage: python hasher.py <directory_name>")
+if len(sys.argv) != 2 and len(sys.argv) != 3:
+    print("Usage: python hasher.py <directory_name> [nef: output just raw data, no header]")
     sys.exit(1)
     
 directory_name = sys.argv[1]
@@ -36,9 +36,13 @@ for root, _, files in os.walk(base_path):
                 sha256_hash.update(byte_block)
         
         checksums[relative_path] = f"sha256:{sha256_hash.hexdigest()}"
-        
-# Output in YAML format (indented by one extra, so it can be pasted into paxd yaml file)
-print("Place the following in the 'install' section of your paxd yaml file, overwriting any existing checksums:\n\n")
-print("  checksums:")
-for path, checksum in checksums.items():
-    print(f"    {path}: {checksum}")
+
+if len(sys.argv) == 3 and sys.argv[2] == "--nef":
+    print("  checksums:")
+    for path, checksum in checksums.items():
+        print(f"    {path}: {checksum}")
+else:
+    print("Place the following in the 'install' section of your paxd yaml file, overwriting any existing checksums:\n\n")
+    print("  checksums:")
+    for path, checksum in checksums.items():
+        print(f"    {path}: {checksum}")
