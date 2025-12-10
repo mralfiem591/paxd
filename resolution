@@ -1,7 +1,7 @@
 {
     "com.mralfiem591.paxd": [
         "paxd",
-        "paxd-client"
+        "self"
     ],
     "com.mralfiem591.test": [
         "paxd-test",
