@@ -978,7 +978,7 @@ class PaxDGUI:
                     "Thank you for installing PaxD GUI!\n\n"
                     "This application allows you to manage PaxD packages with an easy-to-use graphical interface.\n\n"
                     "To get started, use the package list on the left to browse and select packages.\n\n"
-                    "Enjoy using PaxD GUI!\n\n    - mralfiem591 :)\n\nPlease select the 'Refresh' button located at the top-right to load packages.\nThis only needs manually done once after installation."
+                    "Enjoy using PaxD GUI!\n\n    - mralfiem591 :)"
                 )
                 # Remove the .FIRSTRUN file after showing the message
                 try:
