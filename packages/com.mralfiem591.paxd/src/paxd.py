@@ -2173,7 +2173,7 @@ class PaxD:
         
         for attempt in range(max_retries):
             if attempt > 0:
-                print(f"{Fore.YELLOW}Checksum verification failed, retrying in {wait_times[attempt]} seconds... (attempt {attempt + 1}/{max_retries})")
+                print(f"{Fore.YELLOW}Checksum verification failed, retrying in {wait_times[attempt]} seconds... (attempt {attempt + 1}/{max_retries}) {'(using cachebuster)' if attempt == 2 else ''}")
                 import time
                 time.sleep(wait_times[attempt])
                 
@@ -2182,6 +2182,9 @@ class PaxD:
                 repo_url = self._read_repository_url()
                 repo_url = self._resolve_repository_url(repo_url)
                 file_url = f"{repo_url}/packages/{package_name}/src/{file}"
+                if attempt == 2:
+                    # Add cachebuster query parameter, by adding ?t={current time}
+                    file_url += f"?t={int(time.time())}"
                 file_response = requests.get(file_url, headers=self.headers, allow_redirects=True)  # type: ignore
                 file_response.raise_for_status()
                 file_data = file_response.content
