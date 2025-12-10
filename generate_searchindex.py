@@ -92,7 +92,8 @@ def get_package_metadata(package_path: Path):
                     'description': pkg_info.get('pkg_description', 'No description'),
                     'author': pkg_info.get('pkg_author', 'Unknown'),
                     'version': pkg_info.get('pkg_version', 'Unknown'),
-                    'alias': install_info.get('alias', '')
+                    'alias': install_info.get('alias', ''),
+                    'is_metapackage': False
                 }
             except Exception as e:
                 print(f"Warning: Error parsing {manifest_file} for {package_id}: {e}")
@@ -176,7 +177,8 @@ def generate_searchindex():
                 'author': 'Unknown',
                 'version': 'metapackage',
                 'alias': '',
-                'aliases': ''
+                'aliases': '',
+                'is_metapackage': True
             }
             
             packages.append(metadata)
