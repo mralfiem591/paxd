@@ -2723,7 +2723,7 @@ def create_argument_parser():
         help='Name of the package to install'
     )
     install_parser.add_argument(
-        '--skip-checksum', '-sk',
+        '--skip-checksum', '-sc',
         action='store_true',
         help='Skip checksum verification during installation'
     )
