@@ -3,6 +3,10 @@ name: Update Search Index
 permissions:
   contents: write
 
+concurrency:
+  group: package-chores
+  cancel-in-progress: false
+
 on:
   push:
     paths:
