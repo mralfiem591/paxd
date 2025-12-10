@@ -941,6 +941,10 @@ class PaxD:
                 f.write(file_data)
             self._verbose_print(f"Successfully wrote file to disk")
             
+            # Small delay to ensure file write is completely flushed
+            import time
+            time.sleep(0.1)
+            
             # Check if this file has a checksum at package_data[install][checksum], if so, verify it, if not delete it for safety (unless skip_checksum is True)
             expected_checksum = package_data.get("install", {}).get("checksum", {}).get(file)
             if expected_checksum and not skip_checksum:
@@ -949,7 +953,7 @@ class PaxD:
                 raw_checksum = f"sha256:{hashlib.sha256(file_data).hexdigest()}"
                 self._verbose_print(f"Raw downloaded data checksum: {raw_checksum}")
                 self._verbose_print(f"Downloaded data length: {len(file_data)} bytes")
-                # Verify the checksum
+                # Verify the checksum using the same method as hasher.py
                 sha256 = hashlib.sha256()
                 with open(install_path, "rb") as f:
                     while True:
@@ -1450,6 +1454,10 @@ class PaxD:
             with open(install_path, 'wb') as f:
                 f.write(file_data)
                 
+            # Small delay to ensure file write is completely flushed
+            import time
+            time.sleep(0.1)
+                
             updated_files.append(file)
             
             # Verify checksum if provided
@@ -1457,7 +1465,7 @@ class PaxD:
             if expected_checksum and not skip_checksum:
                 # Also calculate checksum of the raw downloaded data for debugging
                 raw_checksum = f"sha256:{hashlib.sha256(file_data).hexdigest()}"
-                # Verify the checksum
+                # Verify the checksum using the same method as hasher.py
                 sha256 = hashlib.sha256()
                 with open(install_path, "rb") as f:
                     while True:
