@@ -173,7 +173,7 @@ def generate_searchindex():
                 'package_id': meta_name,
                 'package_name': f"Metapackage: {base_name}",
                 'description': f"Collection of {len(package_list)} packages: {', '.join(package_list[:3])}{'...' if len(package_list) > 3 else ''}",
-                'author': 'Repository Maintainer',
+                'author': 'Unknown',
                 'version': 'metapackage',
                 'alias': '',
                 'aliases': ''
