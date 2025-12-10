@@ -956,8 +956,6 @@ class PaxDGUI:
         self.setup_gui()
         self.load_packages()
         
-        print(f"INFO: ran from path: {__file__}")
-        
         # If a .FIRSTRUN file exists, show welcome message
         firstrun_path = os.path.join(f"{os.path.dirname(__file__)}-gui", '.FIRSTRUN')
         
