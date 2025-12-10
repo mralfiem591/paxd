@@ -956,17 +956,7 @@ class PaxDGUI:
         self.setup_gui()
         self.load_packages()
         
-        # If __file__ endswith paxd_gui.py and not paxd.py, show an error and exit, prompting to run with "paxd gui" instead of "paxd-gui"
-        if __file__.endswith('paxd_gui.py') and not __file__.endswith('paxd.py'):
-            messagebox.showerror(
-                "Incorrect Launch Method",
-                "It seems you have launched the PaxD GUI incorrectly.\n\n"
-                "Please run the GUI using the command:\n\n    paxd gui\n\n"
-                "This ensures that some features, one of which is allowing GUI uninstallation, are correctly handled.\n\n"
-                "The application will now exit."
-            )
-            self.root.destroy()
-            return
+        print(f"INFO: ran from path: {__file__}")
         
         # If a .FIRSTRUN file exists, show welcome message
         firstrun_path = os.path.join(f"{os.path.dirname(__file__)}-gui", '.FIRSTRUN')
