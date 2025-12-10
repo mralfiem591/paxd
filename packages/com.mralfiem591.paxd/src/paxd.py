@@ -945,71 +945,20 @@ class PaxD:
             import time
             time.sleep(0.2)
             
-            # Check if this file has a checksum at package_data[install][checksum], if so, verify it, if not delete it for safety (unless skip_checksum is True)
+            # Check if this file has a checksum at package_data[install][checksum], if so, verify it with retry mechanism
             expected_checksum = package_data.get("install", {}).get("checksum", {}).get(file)
             self._verbose_print(f"Looking for checksum for file '{file}'")
-            self._verbose_print(f"package_data install section: {package_data.get('install', {})}")
-            self._verbose_print(f"checksum section: {package_data.get('install', {}).get('checksum', {})}")
             self._verbose_print(f"Expected checksum for '{file}': {expected_checksum}")
             
-            if expected_checksum and not skip_checksum:
-                self._verbose_print(f"Verifying checksum for {file}: expected {expected_checksum}")
-                # Also calculate checksum of the raw downloaded data for debugging
-                raw_checksum = f"sha256:{hashlib.sha256(file_data).hexdigest()}"
-                self._verbose_print(f"Raw downloaded data checksum: {raw_checksum}")
-                self._verbose_print(f"Downloaded data length: {len(file_data)} bytes")
-                self._verbose_print(f"File written to: {install_path}")
-                self._verbose_print(f"FIle exists after write: {os.path.exists(install_path)}")
-                if os.path.exists(install_path):
-                    self._verbose_print(f"File size on disk: {os.path.getsize(install_path)} bytes")
-                
-                # Verify the checksum using the same method as hasher.py
-                self._verbose_print(f"Starting checksum calculation with stripped content")
-                # Read file and strip leading/trailing whitespace like hasher.py
-                with open(install_path, "rb") as f:
-                    content = f.read()
-                
-                # Strip leading and trailing whitespace/newlines
-                stripped_content = content.strip()
-                
-                self._verbose_print(f"Original file size: {len(content)} bytes")
-                self._verbose_print(f"Stripped file size: {len(stripped_content)} bytes")
-                self._verbose_print(f"Bytes stripped: {len(content) - len(stripped_content)}")
-                
-                # Show first and last 50 bytes of content for debugging
-                self._verbose_print(f"Install first 50 bytes of content: {content[:50]}")
-                self._verbose_print(f"Install last 50 bytes of content: {content[-50:]}")
-                self._verbose_print(f"Install first 50 bytes of stripped: {stripped_content[:50]}")
-                self._verbose_print(f"Install last 50 bytes of stripped: {stripped_content[-50:]}")
-                
-                # Show hex representation of differences
-                if len(content) != len(stripped_content):
-                    self._verbose_print(f"Install original content hex start: {content[:20].hex()}")
-                    self._verbose_print(f"Install original content hex end: {content[-20:].hex()}")
-                    self._verbose_print(f"Install stripped content hex start: {stripped_content[:20].hex()}")
-                    self._verbose_print(f"Install stripped content hex end: {stripped_content[-20:].hex()}")
-                
-                calculated_checksum = f"sha256:{hashlib.sha256(stripped_content).hexdigest()}"
-                self._verbose_print(f"Calculated checksum: {calculated_checksum}")
-                self._verbose_print(f"Expected checksum:   {expected_checksum}")
-                self._verbose_print(f"Checksums match: {calculated_checksum == expected_checksum}")
-                
-                if calculated_checksum == expected_checksum:
-                    self._verbose_print("Checksum verification passed")
-                    print(f"Checksum verified for {install_path}")
-                else:
-                    self._verbose_print(f"Checksum verification failed: {calculated_checksum} != {expected_checksum}")
-                    print(f"Checksum mismatch for {install_path}: {calculated_checksum} != {expected_checksum}")
-                    # Delete the file if checksum verification fails
-                    os.remove(install_path)
-                    self._verbose_print(f"Deleted invalid file: {install_path}")
-                    print(f"Deleted invalid file {install_path}")
-            else:
-                self._verbose_print("No checksum verification for this file!")
-                if not skip_checksum:
-                    self._verbose_print("Deleting checksum entry for safety")
-                    print(f"{Fore.YELLOW}No checksum provided for {file}, skipping verification.")
-                    os.remove(install_path)
+            # Use the retry mechanism for checksum verification
+            checksum_success = self._verify_checksum_with_retry(
+                file, file_data, install_path, expected_checksum, skip_checksum, package_name, is_update=False
+            )
+            
+            if not checksum_success:
+                # Checksum verification failed after retries, installation was already aborted in the helper method
+                print(f"{Fore.RED}Installation of {package_name} failed due to checksum verification failure.")
+                return
 
         # If package_data[install][firstrun], create a .FIRSTRUN file. If this value is false or non-existent, ignore and continue
         firstrun_flag = package_data.get("install", {}).get("firstrun")
@@ -1491,111 +1440,55 @@ class PaxD:
                 
             updated_files.append(file)
             
-            # Verify checksum if provided
+            # Verify checksum if provided using retry mechanism
             expected_checksum = package_data.get("install", {}).get("checksum", {}).get(file)
             self._verbose_print(f"Looking for checksum for file '{file}' during update")
-            self._verbose_print(f"package_data install section: {package_data.get('install', {})}")
-            self._verbose_print(f"checksum section: {package_data.get('install', {}).get('checksum', {})}")
             self._verbose_print(f"Expected checksum for '{file}': {expected_checksum}")
             
-            if expected_checksum and not skip_checksum:
-                self._verbose_print(f"Starting checksum verification for update of {file}")
-                # Also calculate checksum of the raw downloaded data for debugging
-                raw_checksum = f"sha256:{hashlib.sha256(file_data).hexdigest()}"
-                self._verbose_print(f"Raw downloaded data checksum: {raw_checksum}")
-                self._verbose_print(f"Downloaded data length: {len(file_data)} bytes")
-                self._verbose_print(f"File written to: {install_path}")
-                self._verbose_print(f"File exists after write: {os.path.exists(install_path)}")
-                if os.path.exists(install_path):
-                    self._verbose_print(f"File size on disk: {os.path.getsize(install_path)} bytes")
-                
-                # Verify the checksum using the same method as hasher.py
-                self._verbose_print(f"Starting checksum calculation with stripped content for update")
-                # Read file and strip leading/trailing whitespace like hasher.py
-                with open(install_path, "rb") as f:
-                    content = f.read()
-                
-                # Strip leading and trailing whitespace/newlines
-                stripped_content = content.strip()
-                
-                self._verbose_print(f"Update original file size: {len(content)} bytes")
-                self._verbose_print(f"Update stripped file size: {len(stripped_content)} bytes")
-                self._verbose_print(f"Update bytes stripped: {len(content) - len(stripped_content)}")
-                
-                # Show first and last 50 bytes of content for debugging
-                self._verbose_print(f"First 50 bytes of content: {content[:50]}")
-                self._verbose_print(f"Last 50 bytes of content: {content[-50:]}")
-                self._verbose_print(f"First 50 bytes of stripped: {stripped_content[:50]}")
-                self._verbose_print(f"Last 50 bytes of stripped: {stripped_content[-50:]}")
-                
-                # Show hex representation of differences
-                if len(content) != len(stripped_content):
-                    self._verbose_print(f"Original content hex start: {content[:20].hex()}")
-                    self._verbose_print(f"Original content hex end: {content[-20:].hex()}")
-                    self._verbose_print(f"Stripped content hex start: {stripped_content[:20].hex()}")
-                    self._verbose_print(f"Stripped content hex end: {stripped_content[-20:].hex()}")
-                
-                calculated_checksum = f"sha256:{hashlib.sha256(stripped_content).hexdigest()}"
-                self._verbose_print(f"Update calculated checksum: {calculated_checksum}")
-                self._verbose_print(f"Update expected checksum:   {expected_checksum}")
-                self._verbose_print(f"Update checksums match: {calculated_checksum == expected_checksum}")
-                
-                if calculated_checksum == expected_checksum:
-                    print(f"Checksum verified for {file}")
-                    # Remove backup if checksum is correct
-                    if os.path.exists(backup_path):
-                        os.remove(backup_path)
-                        backup_files.remove(backup_path) if backup_path in backup_files else None
+            # Use the retry mechanism for checksum verification
+            checksum_success = self._verify_checksum_with_retry(
+                file, file_data, install_path, expected_checksum, skip_checksum, package_name, 
+                is_update=True, backup_path=backup_path
+            )
+            
+            if checksum_success and expected_checksum and not skip_checksum:
+                # Remove backup if checksum verification was successful
+                if os.path.exists(backup_path):
+                    os.remove(backup_path)
+                    backup_files.remove(backup_path) if backup_path in backup_files else None
+            elif not checksum_success:
+                # Checksum failed after retries, file was already restored from backup or deleted
+                # Remove from updated_files since it was restored/deleted
+                updated_files.remove(file) if file in updated_files else None
+            elif not expected_checksum and not skip_checksum:
+                # No checksum provided, handle backup restoration for safety
+                print(f"{Fore.YELLOW}No checksum provided for {file}, recovering from backup for safety.")
+                if os.path.exists(backup_path):
+                    shutil.copy2(backup_path, install_path)
+                    os.remove(backup_path)
+                    backup_files.remove(backup_path) if backup_path in backup_files else None
+                    print(f"Restored {file} from backup due to missing checksum")
+                    updated_files.remove(file) if file in updated_files else None
                 else:
-                    print(f"Checksum mismatch for {file}: {calculated_checksum} != {expected_checksum}")
-                    self._verbose_print(f"Checksum verification failed for {file}: {calculated_checksum} != {expected_checksum}")
-                    # Restore from backup
-                    if os.path.exists(backup_path):
-                        shutil.copy2(backup_path, install_path)
-                        os.remove(backup_path)
-                        backup_files.remove(backup_path) if backup_path in backup_files else None
-                        print(f"Restored {file} from backup due to checksum failure")
-                        # Remove from updated_files since it was restored
-                        updated_files.remove(file) if file in updated_files else None
+                    print(f"{Fore.RED}CRITICAL: There was a checksum mismatch for {file}, but no backup file was found!")
+                    print("This should NEVER happen. You have a choice to make:")
+                    print("1) Abort the update process now to avoid potential corruption.")
+                    print("2) Proceed anyway, understanding the risk of someone doing something NASTY to your machine.")
+                    print(f"3) Delete the installed file ({file}), understanding that this may corrupt this package.")
+                    choice = input("Enter 1, 2, or 3: ").strip()
+                    if choice == "1":
+                        print("Aborting update process.")
+                        raise Exception("Update aborted by user due to missing backup file on checksum failure.")
+                    elif choice == "2":
+                        print("Proceeding with update despite missing backup file.")
+                    elif choice == "3":
+                        if os.path.exists(install_path):
+                            os.remove(install_path)
+                            print(f"Deleted installed file {file} due to missing backup on checksum failure.")
+                            updated_files.remove(file) if file in updated_files else None
                     else:
-                        os.remove(install_path)
-                        print(f"Deleted invalid file {file}")
-                        # Remove from updated_files since it was deleted
-                        updated_files.remove(file) if file in updated_files else None
-            else:
-                print(f"No checksum verification found for {file}!")
-                if not skip_checksum:
-                    print(f"{Fore.YELLOW}No checksum provided for {file}, recovering from backup for safety.")
-                    self._verbose_print(f"Deleting checksum entry for safety for {file}")
-                    # Restore from backup
-                    if os.path.exists(backup_path):
-                        shutil.copy2(backup_path, install_path)
-                        os.remove(backup_path)
-                        backup_files.remove(backup_path) if backup_path in backup_files else None
-                        print(f"Restored {file} from backup due to missing checksum")
-                        # Remove from updated_files since it was restored
-                        updated_files.remove(file) if file in updated_files else None
-                    else:
-                        print(f"{Fore.RED}CRITICAL: There was a checksum mismatch for {file}, but no backup file was found!")
-                        print("This should NEVER happen. You have a choice to make:")
-                        print("1) Abort the update process now to avoid potential corruption.")
-                        print("2) Proceed anyway, understanding the risk of someone doing something NASTY to your machine.")
-                        print(f"3) Delete the installed file ({file}), understanding that this may corrupt this package.")
-                        choice = input("Enter 1, 2, or 3: ").strip()
-                        if choice == "1":
-                            print("Aborting update process.")
-                            raise Exception("Update aborted by user due to missing backup file on checksum failure.")
-                        elif choice == "2":
-                            print("Proceeding with update despite missing backup file.")
-                        elif choice == "3":
-                            if os.path.exists(install_path):
-                                os.remove(install_path)
-                                print(f"Deleted installed file {file} due to missing backup on checksum failure.")
-                                # Remove from updated_files since it was deleted
-                                updated_files.remove(file) if file in updated_files else None
-                        else:
-                            print("Invalid choice. Aborting update process.")
-                            raise Exception("Update aborted by user due to invalid choice on missing backup file.")
+                        print("Invalid choice. Aborting update process.")
+                        raise Exception("Update aborted by user due to invalid choice on missing backup file.")
         
         # Clean up any remaining backup files (for files without checksums or after successful updates)
         cleaned_backups = self._cleanup_backup_files(backup_files, "successful update")
@@ -2261,6 +2154,83 @@ class PaxD:
             os.remove(dependency_file)
         
         print(f"Marked '{package_name}' as user-installed")
+    
+    def _verify_checksum_with_retry(self, file, file_data, install_path, expected_checksum, skip_checksum, package_name, is_update=False, backup_path=None):
+        """Verify checksum with retry mechanism. Returns True if successful, False if failed after all retries."""
+        if not expected_checksum or skip_checksum:
+            if not skip_checksum and not expected_checksum:
+                self._verbose_print("No checksum verification for this file!")
+                print(f"{Fore.YELLOW}No checksum provided for {file}, skipping verification.")
+                if is_update:
+                    return True  # Allow update to continue without checksum
+                else:
+                    os.remove(install_path)
+                    return False
+            return True
+
+        max_retries = 3
+        wait_times = [0, 5, 10]  # No wait for first attempt, then 5s, then 10s
+        
+        for attempt in range(max_retries):
+            if attempt > 0:
+                print(f"{Fore.YELLOW}Checksum verification failed, retrying in {wait_times[attempt]} seconds... (attempt {attempt + 1}/{max_retries})")
+                import time
+                time.sleep(wait_times[attempt])
+                
+                # Re-download the file for retry
+                self._verbose_print(f"Re-downloading {file} for retry attempt {attempt + 1}")
+                repo_url = self._read_repository_url()
+                repo_url = self._resolve_repository_url(repo_url)
+                file_url = f"{repo_url}/packages/{package_name}/src/{file}"
+                file_response = requests.get(file_url, headers=self.headers, allow_redirects=True)  # type: ignore
+                file_response.raise_for_status()
+                file_data = file_response.content
+                
+                # Write the re-downloaded file
+                with open(install_path, 'wb') as f:
+                    f.write(file_data)
+                time.sleep(0.2)  # Small delay to ensure file write is flushed
+            
+            self._verbose_print(f"Verifying checksum for {file}: expected {expected_checksum} (attempt {attempt + 1})")
+            
+            # Calculate checksum using same method as hasher.py
+            with open(install_path, "rb") as f:
+                content = f.read()
+            stripped_content = content.strip()
+            calculated_checksum = f"sha256:{hashlib.sha256(stripped_content).hexdigest()}"
+            
+            self._verbose_print(f"Attempt {attempt + 1} - Calculated: {calculated_checksum}, Expected: {expected_checksum}")
+            
+            if calculated_checksum == expected_checksum:
+                self._verbose_print(f"Checksum verification passed on attempt {attempt + 1}")
+                print(f"Checksum verified for {file}" + (f" (after {attempt} retries)" if attempt > 0 else ""))
+                return True
+        
+        # All retries failed
+        print(f"{Fore.RED}Checksum verification failed after {max_retries} attempts for {file}")
+        print(f"{Fore.RED}Expected: {expected_checksum}")
+        print(f"{Fore.RED}Got:      {calculated_checksum}")
+        
+        if is_update and backup_path and os.path.exists(backup_path):
+            # Restore from backup for update
+            shutil.copy2(backup_path, install_path)
+            print(f"Restored {file} from backup due to checksum failure")
+        else:
+            # Delete the invalid file
+            if os.path.exists(install_path):
+                os.remove(install_path)
+                print(f"Deleted invalid file {file}")
+                
+            # For install, clean up partial installation
+            if not is_update:
+                local_app_data = os.path.join(os.path.expandvars(r"%LOCALAPPDATA%"), "PaxD")
+                package_path = os.path.join(local_app_data, package_name)
+                if os.path.exists(package_path):
+                    print(f"{Fore.RED}Removing partially installed package due to checksum failure...")
+                    shutil.rmtree(package_path, onerror=permission_handler)
+                    print(f"{Fore.RED}Package {package_name} installation aborted due to checksum verification failure")
+        
+        return False
     
     def _cleanup_orphaned_dependencies(self, package_name: str, current_dependencies: set):
         """Remove dependencies that are no longer needed."""
