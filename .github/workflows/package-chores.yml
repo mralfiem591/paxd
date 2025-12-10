@@ -3,6 +3,10 @@ name: Package Chores
 permissions:
   contents: write
 
+concurrency:
+  group: package-chores
+  cancel-in-progress: true # If the chore workflow is triggered again, cancel the in-progress run
+
 on:
   push:
     paths:
