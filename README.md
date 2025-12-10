@@ -1,6 +1,6 @@
 # PaxD Default Repository
 
-[![Update Search Index](https://github.com/mralfiem591/paxd/actions/workflows/update-search-index.yml/badge.svg)](https://github.com/mralfiem591/paxd/actions/workflows/update-search-index.yml)
+[![Package Chores](https://github.com/mralfiem591/paxd/actions/workflows/package-chores.yml/badge.svg)](https://github.com/mralfiem591/paxd/actions/workflows/package-chores.yml)
 
 ![PaxD Logo](repoasset/logo.png)
 ![PaxD Ready Badge](repoasset/paxdready.png)
