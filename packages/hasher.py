@@ -4,7 +4,7 @@ PaxD Package Hasher Tool
 
 This script iterates through each package folder in the packages/ directory,
 calculates SHA256 hashes for all files in each package's src/ directory,
-and updates the checksums section in the package's YAML file.
+and updates the checksum section in the package's YAML file.
 
 Usage: python hasher.py
 """
@@ -61,7 +61,7 @@ def hash_package_files(package_dir):
     return checksums
 
 def update_package_yaml(yaml_path, checksums):
-    """Update the checksums section in the package YAML file."""
+    """Update the checksum section in the package YAML file."""
     try:
         # Read existing YAML
         with open(yaml_path, 'r', encoding='utf-8') as f:
@@ -71,14 +71,14 @@ def update_package_yaml(yaml_path, checksums):
         if 'install' not in data:
             data['install'] = {}
         
-        # Update checksums section
+        # Update checksum section
         if checksums:
-            data['install']['checksums'] = checksums
-            print(f"    Updated checksums section with {len(checksums)} entries")
+            data['install']['checksum'] = checksums
+            print(f"    Updated checksum section with {len(checksums)} entries")
         else:
-            # Remove checksums section if no files were found
-            data['install'].pop('checksums', None)
-            print(f"    Removed checksums section (no files found)")
+            # Remove checksum section if no files were found
+            data['install'].pop('checksum', None)
+            print(f"    Removed checksum section (no files found)")
         
         # Write updated YAML
         with open(yaml_path, 'w', encoding='utf-8') as f:
