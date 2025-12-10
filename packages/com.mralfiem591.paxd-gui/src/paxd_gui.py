@@ -62,9 +62,6 @@ def parse_search_index(csv_content: str) -> List[Dict]:
             if aliases_str:
                 aliases = [alias.strip() for alias in aliases_str.split('|') if alias.strip()]
             
-            # Check if this is a metapackage
-            is_metapackage = row.get('is_metapackage', '').strip().lower() in ['true', '1', 'yes']
-            
             package = {
                 'package_id': row.get('package_id', '').strip(),
                 'package_name': row.get('package_name', '').strip(),
@@ -73,7 +70,6 @@ def parse_search_index(csv_content: str) -> List[Dict]:
                 'version': row.get('version', '').strip(),
                 'alias': row.get('alias', '').strip(),  # Main alias
                 'aliases': aliases,  # All aliases as list
-                'is_metapackage': is_metapackage,
                 'installed': False  # Will be updated later
             }
             
@@ -446,70 +442,44 @@ class PackageListFrame(ttk.Frame):
         self.display_packages()
     
     def display_packages(self):
-        """Display filtered packages in treeview with metapackage separator"""
+        """Display filtered packages in treeview"""
         # Clear existing items
         for item in self.tree.get_children():
             self.tree.delete(item)
         
-        # Separate regular packages and metapackages
-        regular_packages = [pkg for pkg in self.filtered_packages if not pkg.get('is_metapackage', False)]
-        meta_packages = [pkg for pkg in self.filtered_packages if pkg.get('is_metapackage', False)]
-        
-        # Add regular packages first
-        for package in regular_packages:
-            self._add_package_item(package)
-        
-        # Add separator if we have both types of packages
-        if regular_packages and meta_packages:
-            self.tree.insert('', 'end',
-                text="",
-                values=("── Metapackages ──", "", "", ""),
-                tags=('separator',)
+        # Add packages
+        for package in self.filtered_packages:
+            installed = package.get('installed', False)
+            update_available = package.get('update_available', False)
+            
+            if installed and update_available:
+                status = f"✓ Installed - Update available! {package.get('installed_version', 'Unknown')} > {package['version']}"
+                icon = "⚠"
+                tag = 'update_available'
+            elif installed:
+                status = "✓ Installed"
+                icon = "✓"
+                tag = 'installed'
+            else:
+                status = "Not installed"
+                icon = ""
+                tag = 'not_installed'
+            
+            self.tree.insert('', 'end', 
+                text=icon,
+                values=(
+                    package['package_name'],
+                    package['version'],
+                    package['author'],
+                    status
+                ),
+                tags=(tag,)
             )
-        
-        # Add metapackages
-        for package in meta_packages:
-            self._add_package_item(package, is_meta=True)
         
         # Configure tags
         self.tree.tag_configure('installed', foreground='green')
         self.tree.tag_configure('not_installed', foreground='black')
         self.tree.tag_configure('update_available', foreground='orange', font=('TkDefaultFont', 9, 'bold'))
-        self.tree.tag_configure('metapackage', foreground='purple')
-        self.tree.tag_configure('separator', foreground='gray', font=('TkDefaultFont', 9, 'italic'))
-    
-    def _add_package_item(self, package, is_meta=False):
-        """Add a package item to the tree"""
-        installed = package.get('installed', False)
-        update_available = package.get('update_available', False)
-        
-        if is_meta:
-            status = "📦 Metapackage"
-            icon = "📦"
-            tag = 'metapackage'
-        elif installed and update_available:
-            status = f"✓ Installed - Update available! {package.get('installed_version', 'Unknown')} > {package['version']}"
-            icon = "⚠"
-            tag = 'update_available'
-        elif installed:
-            status = "✓ Installed"
-            icon = "✓"
-            tag = 'installed'
-        else:
-            status = "Not installed"
-            icon = ""
-            tag = 'not_installed'
-        
-        self.tree.insert('', 'end', 
-            text=icon,
-            values=(
-                package['package_name'],
-                package['version'],
-                package['author'],
-                status
-            ),
-            tags=(tag,)
-        )
     
     def on_search_changed(self, *args):
         """Handle search change"""
@@ -524,12 +494,6 @@ class PackageListFrame(ttk.Frame):
         selection = self.tree.selection()
         if selection:
             item = self.tree.item(selection[0])
-            
-            # Check if this is a separator item and prevent selection
-            if 'separator' in item.get('tags', []):
-                self.tree.selection_remove(selection[0])
-                return
-            
             package_name = item['values'][0]
             
             # Find package by name
