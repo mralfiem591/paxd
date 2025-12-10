@@ -11,6 +11,9 @@ on:
   push:
     paths:
       - "packages/**/src/**" # Package source files (triggers hash update)
+      - "generate_searchindex.py" # Search index generation script (triggers search index update incase its changed, to immediately apply for quick fixes)
+      - "packages/hasher.py" # Hashing script (triggers hash update incase its changed, to immediately apply for quick fixes)
+      - "packages/metapackages/*.meta" # Metapackage files (triggers search index update)
       - "packages/**/paxd" # Legacy package files (triggers search index update)
       - "packages/**/paxd.yaml" # Package manifest files (triggers search index update)
       - "packages/**/package.yaml" # Package manifest files (triggers search index update)
