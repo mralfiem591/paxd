@@ -157,7 +157,7 @@ def generate_searchindex():
     
     # Then, collect metapackages (.meta files)
     print("Searching for metapackages...")
-    for meta_file in sorted(packages_dir.glob('*.meta')):
+    for meta_file in sorted((packages_dir / 'metapackages').glob('*.meta')):
         print(f"Processing metapackage {meta_file.name}...")
         
         try:
