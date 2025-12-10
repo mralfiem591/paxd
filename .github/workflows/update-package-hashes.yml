@@ -26,7 +26,10 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update hashes
-        run: python packages/hasher.py
+        run: |
+          cd packages
+          python hasher.py
+          cd ..
 
       - name: Check for changes
         id: git-check
