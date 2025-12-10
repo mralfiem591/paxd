@@ -2314,7 +2314,7 @@ class PaxD:
         installed_packages = []
         for item in os.listdir(local_app_data):
             package_path = os.path.join(local_app_data, item)
-            if os.path.isdir(package_path):
+            if os.path.isdir(package_path) and item != ".metapackages":
                 installed_packages.append(item)
         
         if not installed_packages:
