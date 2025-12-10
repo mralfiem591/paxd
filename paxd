@@ -8,7 +8,7 @@
     },
     "credit": {
         "maintainer": "mralfiem591",
-        "backend": "Git, GH API, mralfiem591",
+        "backend": "Git, GH API, mralfiem591, and a bit of magic",
         "frontend": "GitHub, mralfiem591"
     }
 }
