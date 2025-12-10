@@ -12,7 +12,6 @@ on:
   push:
     paths:
       - "packages/**/src/**" # Package source files (triggers hash update)
-      - "packages/metapackages/*.meta" # Metapackages (triggers search index update)
       - "packages/**/paxd" # Legacy package files (triggers search index update)
       - "packages/**/paxd.yaml" # Package manifest files (triggers search index update)
       - "packages/**/package.yaml" # Package manifest files (triggers search index update)
