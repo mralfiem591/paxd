@@ -89,6 +89,22 @@ def validate_extension_folder(folder_path: str) -> tuple[bool, str, dict]:
 
 from typing import Optional
 
+def replace_placeholders_in_content(content: str, zip_name: str) -> str:
+    """
+    Replace placeholders in file content.
+    Currently supports:
+    - [ZIP_NAME] -> zip file name without extension
+    """
+    # Get zip name without .zip extension
+    zip_name_base = zip_name
+    if zip_name_base.lower().endswith('.zip'):
+        zip_name_base = zip_name_base[:-4]
+    
+    # Replace placeholders
+    content = content.replace('[ZIP_NAME]', zip_name_base)
+    
+    return content
+
 def create_extension_zip(folder_path: str, output_path: Optional[str] = None) -> bool:
     """
     Create a PaxD extension zip file from a folder.
@@ -113,14 +129,46 @@ def create_extension_zip(folder_path: str, output_path: Optional[str] = None) ->
     
     # Create the zip file
     try:
+        # Get the actual zip file name for placeholder replacement
+        zip_file_name = output_path_obj.name
+        
         with zipfile.ZipFile(output_path_obj, 'w', zipfile.ZIP_DEFLATED) as zipf:
             # Add all files from the folder
             for file_path in folder_path_obj.rglob('*'):
                 if file_path.is_file():
                     # Calculate relative path within the extension
                     relative_path = file_path.relative_to(folder_path_obj)
-                    zipf.write(file_path, relative_path)
-                    print(f"  Added: {relative_path}")
+                    
+                    # Check if file is text-based and should have placeholders replaced
+                    text_extensions = {'.py', '.txt', '.md', '.json', '.yaml', '.yml', '.xml', '.html', '.js', '.css', '.ini', '.cfg', '.conf'}
+                    should_process_text = file_path.suffix.lower() in text_extensions
+                    
+                    if should_process_text:
+                        try:
+                            # Read file content and process placeholders
+                            with open(file_path, 'r', encoding='utf-8') as f:
+                                original_content = f.read()
+                            
+                            # Replace placeholders
+                            processed_content = replace_placeholders_in_content(original_content, zip_file_name)
+                            
+                            # Check if any replacements were made
+                            if processed_content != original_content:
+                                print(f"  Added: {relative_path} (processed [ZIP_NAME] placeholders)")
+                                # Write processed content to zip
+                                zipf.writestr(str(relative_path), processed_content.encode('utf-8'))
+                            else:
+                                print(f"  Added: {relative_path}")
+                                zipf.write(file_path, relative_path)
+                                
+                        except (UnicodeDecodeError, UnicodeError):
+                            # File is binary or has encoding issues, add as-is
+                            print(f"  Added: {relative_path} (binary/encoding issue)")
+                            zipf.write(file_path, relative_path)
+                    else:
+                        # Binary file or non-text file, add as-is
+                        print(f"  Added: {relative_path}")
+                        zipf.write(file_path, relative_path)
         
         print(f"✅ Successfully created extension: {output_path_obj}")
         print(f"📦 Extension: {extension_info['name']} v{extension_info['version']}")
@@ -145,6 +193,12 @@ Examples:
   python extension_packager.py my_extension_folder
   python extension_packager.py my_extension_folder -o my_extension.zip
   python extension_packager.py ./example_extension --output ~/Desktop/my_extension.zip
+
+Placeholders:
+  The packager supports placeholders in text files that will be replaced during packaging:
+  - [ZIP_NAME] : Replaced with the zip file name (without .zip extension)
+  
+  Text files include: .py, .txt, .md, .json, .yaml, .yml, .xml, .html, .js, .css, .ini, .cfg, .conf
         """,
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
