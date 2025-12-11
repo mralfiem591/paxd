@@ -147,9 +147,9 @@ def update_stats(stats_file, action_type, package):
 
 # Extension metadata - REQUIRED for all PaxD extensions
 EXTENSION_INFO = {
-    "name": "activity-logger",
+    "name": "example-extension-activity-logger",
     "version": "1.0.0",
-    "description": "Logs all PaxD operations and provides activity statistics",
+    "description": "Logs all PaxD operations and provides activity statistics. Used as an example extension.",
     "author": "mralfiem591",
     "triggers": [
         "pre_install",
@@ -162,5 +162,6 @@ EXTENSION_INFO = {
         "post_search",
         "listall.start",
         "listall.end"
-    ]
+    ],
+    "source_url": "https://github.com/mralfiem591/paxd/raw/refs/heads/extensions/activity-logger.zip"
 }
