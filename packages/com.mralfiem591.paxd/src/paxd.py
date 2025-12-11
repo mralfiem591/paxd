@@ -52,6 +52,8 @@ import requests # type: ignore (requests is in paxd file dependencies)
 import json
 from pathlib import Path as PathLib
 import hashlib
+import zipfile
+import glob
 import shutil
 import argparse # type: ignore (argparse is in paxd file dependencies)
 from colorama import init, Fore, Style  # type: ignore (colorama is in paxd file dependencies)
@@ -374,6 +376,192 @@ def add_to_path(folder_path: str) -> bool:
         print(f"Error modifying PATH: {e}")
         return False
 
+class TriggerSystem:
+    """System for managing extension triggers throughout PaxD"""
+    
+    def __init__(self):
+        self.triggers = {}
+        self._verbose_print = None
+    
+    def set_verbose_print(self, verbose_print_func):
+        """Set the verbose print function for logging"""
+        self._verbose_print = verbose_print_func
+    
+    def register_trigger(self, trigger_name: str, callback):
+        """Register a callback function for a specific trigger"""
+        if trigger_name not in self.triggers:
+            self.triggers[trigger_name] = []
+        self.triggers[trigger_name].append(callback)
+        if self._verbose_print:
+            self._verbose_print(f"Extension registered for trigger: {trigger_name}")
+    
+    def execute_trigger(self, trigger_name: str, *args, **kwargs):
+        """Execute all registered callbacks for a trigger"""
+        if trigger_name in self.triggers:
+            if self._verbose_print:
+                self._verbose_print(f"Executing trigger: {trigger_name} with {len(self.triggers[trigger_name])} callbacks")
+            for callback in self.triggers[trigger_name]:
+                try:
+                    callback(*args, **kwargs)
+                except Exception as e:
+                    if self._verbose_print:
+                        self._verbose_print(f"Extension callback failed for {trigger_name}: {e}")
+                    else:
+                        print(f"Extension error in {trigger_name}: {e}")
+
+
+class ExtensionManager:
+    """Manager for PaxD extensions"""
+    
+    def __init__(self, base_dir: str, trigger_system: TriggerSystem, verbose_func=None):
+        self.base_dir = base_dir
+        self.extensions_dir = os.path.join(base_dir, "extensions")
+        self.trigger_system = trigger_system
+        self._verbose_print = verbose_func or print
+        
+        # Ensure extensions directory exists
+        os.makedirs(self.extensions_dir, exist_ok=True)
+        
+        # Load all extensions at startup
+        self.load_all_extensions()
+    
+    def install_extension(self, zip_path: str) -> bool:
+        """Install an extension from a zip file"""
+        try:
+            if not os.path.exists(zip_path):
+                print(f"Extension zip file not found: {zip_path}")
+                return False
+            
+            if not zip_path.lower().endswith('.zip'):
+                print(f"Extension file must be a .zip file: {zip_path}")
+                return False
+            
+            # Get extension name from zip filename
+            extension_name = os.path.splitext(os.path.basename(zip_path))[0]
+            extension_dir = os.path.join(self.extensions_dir, extension_name)
+            
+            # Check if extension already exists
+            if os.path.exists(extension_dir):
+                print(f"Extension '{extension_name}' is already installed")
+                response = input("Do you want to overwrite it? (y/N): ").strip().lower()
+                if response != 'y':
+                    return False
+                shutil.rmtree(extension_dir)
+            
+            # Extract zip to extension directory
+            os.makedirs(extension_dir, exist_ok=True)
+            
+            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                zip_ref.extractall(extension_dir)
+            
+            self._verbose_print(f"Extracted extension to: {extension_dir}")
+            
+            # Load the new extension
+            self.load_extension(extension_name)
+            
+            print(f"Successfully installed extension: {extension_name}")
+            return True
+            
+        except Exception as e:
+            print(f"Failed to install extension: {e}")
+            return False
+    
+    def uninstall_extension(self, extension_name: str) -> bool:
+        """Uninstall an extension by removing its directory"""
+        try:
+            extension_dir = os.path.join(self.extensions_dir, extension_name)
+            
+            if not os.path.exists(extension_dir):
+                print(f"Extension '{extension_name}' is not installed")
+                return False
+            
+            # Remove extension directory
+            shutil.rmtree(extension_dir)
+            
+            print(f"Successfully uninstalled extension: {extension_name}")
+            # Note: We don't need to unregister triggers as they'll be cleared on next restart
+            print("Note: Extension triggers will be cleared when PaxD restarts")
+            return True
+            
+        except Exception as e:
+            print(f"Failed to uninstall extension: {e}")
+            return False
+    
+    def list_extensions(self):
+        """List all installed extensions"""
+        if not os.path.exists(self.extensions_dir):
+            print("No extensions installed")
+            return
+        
+        extensions = [d for d in os.listdir(self.extensions_dir) 
+                     if os.path.isdir(os.path.join(self.extensions_dir, d))]
+        
+        if not extensions:
+            print("No extensions installed")
+        else:
+            print(f"Installed extensions ({len(extensions)}):")
+            for ext in sorted(extensions):
+                extension_dir = os.path.join(self.extensions_dir, ext)
+                trigger_files = glob.glob(os.path.join(extension_dir, "*.py"))
+                print(f"  - {ext} ({len(trigger_files)} trigger files)")
+    
+    def load_all_extensions(self):
+        """Load all extensions from the extensions directory"""
+        if not os.path.exists(self.extensions_dir):
+            return
+        
+        extensions = [d for d in os.listdir(self.extensions_dir) 
+                     if os.path.isdir(os.path.join(self.extensions_dir, d))]
+        
+        for extension_name in extensions:
+            self.load_extension(extension_name)
+    
+    def load_extension(self, extension_name: str):
+        """Load a specific extension and register its triggers"""
+        extension_dir = os.path.join(self.extensions_dir, extension_name)
+        
+        if not os.path.exists(extension_dir):
+            self._verbose_print(f"Extension directory not found: {extension_dir}")
+            return
+        
+        # Find all Python files in the extension directory
+        trigger_files = glob.glob(os.path.join(extension_dir, "*.py"))
+        
+        for trigger_file in trigger_files:
+            try:
+                # Extract trigger name from filename (without .py)
+                trigger_name = os.path.splitext(os.path.basename(trigger_file))[0]
+                
+                self._verbose_print(f"Loading extension trigger: {extension_name}/{trigger_name}")
+                
+                # Read and execute the trigger file
+                with open(trigger_file, 'r', encoding='utf-8') as f:
+                    trigger_code = f.read()
+                
+                # Create a namespace for the extension
+                extension_namespace = {
+                    '__name__': f'extension_{extension_name}_{trigger_name}',
+                    '__file__': trigger_file,
+                    'print': print,
+                    'os': os,
+                    'sys': sys,
+                    # Add more safe modules as needed
+                }
+                
+                # Execute the trigger code
+                exec(trigger_code, extension_namespace)
+                
+                # Look for a main function to register as the trigger callback
+                if 'main' in extension_namespace and callable(extension_namespace['main']):
+                    self.trigger_system.register_trigger(trigger_name, extension_namespace['main'])
+                    self._verbose_print(f"Registered trigger callback: {trigger_name}")
+                else:
+                    self._verbose_print(f"No main() function found in {trigger_file}")
+                    
+            except Exception as e:
+                self._verbose_print(f"Failed to load extension trigger {trigger_file}: {e}")
+
+
 class PaxD:
     def __init__(self, verbose=False):
         self.paxd_version_phrase = "The MetaPackage Update"
@@ -393,6 +581,15 @@ class PaxD:
         else:
             self.headers = {"User-Agent": f"PaxdClient/{self.paxd_version}"}
         self.verbose = verbose
+        
+        # Initialize extension system
+        self.trigger_system = TriggerSystem()
+        self.trigger_system.set_verbose_print(self._verbose_print)
+        self.extension_manager = ExtensionManager(
+            os.path.dirname(__file__), 
+            self.trigger_system, 
+            self._verbose_print
+        )
     
     def _verbose_print(self, message, color=Fore.LIGHTBLACK_EX, mode=0):
         """Print message only in verbose mode with timestamp. (still log incase of exception, for Sentry, to provide more context)
@@ -633,6 +830,9 @@ class PaxD:
         """
         self._verbose_timing_start(f"install {package_name}")
         self._verbose_print(f"Installing package: {package_name} (user_requested={user_requested})")
+        
+        # Trigger: install.start
+        trigger_system.execute_trigger("pre_install", package=package_name, user_requested=user_requested)
         
         # Read and resolve repository URL
         self._verbose_print("Reading and resolving repository URL")
@@ -1009,6 +1209,10 @@ class PaxD:
             self._verbose_print("Package installed as dependency, not marking as user-installed")
         
         self._verbose_timing_end(f"install {package_name}")
+        
+        # Trigger: install.end
+        trigger_system.execute_trigger("post_install", package=package_name, user_requested=user_requested, version=installed_version)
+        
         print(f"{Fore.GREEN}> Installed version {Fore.CYAN}{installed_version}{Fore.GREEN} of '{pkg_name_friendly}'{Style.RESET_ALL}")
         if mainfile:
             print(f"{Fore.YELLOW}Easily run it with '{Fore.GREEN}{alias if alias else mainfile.split('.')[0]}{Fore.YELLOW}' in your shell.")
@@ -1017,6 +1221,10 @@ class PaxD:
         """Uninstall a package."""
         self._verbose_timing_start(f"uninstall {package_name}")
         self._verbose_print(f"Uninstalling package: {package_name}")
+        
+        # Trigger pre-uninstall extensions
+        trigger_system.execute_trigger("pre_uninstall", package=package_name)
+        
         print(f"{Fore.RED}Uninstalling {Fore.CYAN}{package_name}{Fore.RED}...")
         
         # Read and resolve repository URL
@@ -1211,6 +1419,9 @@ class PaxD:
             if not os.path.exists(package_folder):
                 print(f"{Fore.GREEN}> Successfully uninstalled '{Fore.CYAN}{package_name}{Fore.GREEN}' - deleted package folder {package_folder}")
                 self._verbose_print(f"Successfully uninstalled package: {package_name}")
+                
+                # Trigger post-uninstall extensions
+                trigger_system.execute_trigger("post_uninstall", package=package_name)
             else:
                 print(f"{Fore.RED}Failed to delete package folder {package_folder}")
                 self._verbose_print(f"Failed to delete package folder: {package_folder}")
@@ -1219,6 +1430,9 @@ class PaxD:
         """Update a package to the latest version."""
         self._verbose_timing_start(f"update {package_name}")
         self._verbose_print(f"Updating package: {package_name} (force={force})")
+        
+        # Trigger pre-update extensions
+        trigger_system.execute_trigger("pre_update", package=package_name, force=force)
         
         if not package_name:
             self._verbose_print("No package name provided for update")
@@ -1525,9 +1739,16 @@ class PaxD:
             print(f"{Fore.BLUE}Updated files: {Fore.WHITE}{', '.join(updated_files)}")
         if excluded_files:
             print(f"{Fore.YELLOW}Excluded from update: {Fore.WHITE}{', '.join(excluded_files)}")
+        
+        # Trigger post-update extensions
+        trigger_system.execute_trigger("post_update", package=package_name, version=latest_version, files=updated_files)
             
     def list_installed(self):
         """List all installed packages with their versions."""
+        
+        # Trigger: listall.start
+        trigger_system.execute_trigger("listall.start")
+        
         local_app_data = os.path.join(os.path.expandvars(r"%LOCALAPPDATA%"), "PaxD")
         if not os.path.exists(local_app_data):
             print(f"{Fore.YELLOW}No packages installed.")
@@ -1554,6 +1775,9 @@ class PaxD:
         for pkg, ver, user in sorted(packages):
             status = f"{Fore.GREEN}[USER]" if user else f"{Fore.YELLOW}[DEP]"
             print(f"  {status} {Fore.CYAN}{pkg} {Fore.WHITE}({ver})")
+        
+        # Trigger: listall.end
+        trigger_system.execute_trigger("listall.end", packages=packages)
 
     def is_installed(self, package_name):
         """Check if a package is installed."""
@@ -1799,6 +2023,9 @@ class PaxD:
         """Search for packages by name, alias, or description."""
         self._verbose_timing_start(f"search {search_term}")
         self._verbose_print(f"Searching for packages matching: {search_term}")
+        
+        # Trigger pre-search extensions
+        trigger_system.execute_trigger("pre_search", term=search_term)
         
         if not search_term:
             self._verbose_print("No search term provided")
@@ -2061,6 +2288,10 @@ class PaxD:
                 print()
                 
             print(f"{Fore.CYAN}To install a package, use: {Fore.GREEN}paxd install <package_name_or_alias>")
+            
+            # Trigger post-search extensions
+            trigger_system.execute_trigger("post_search", term=search_term, results=found_packages)
+            
             self._verbose_timing_end(f"search {search_term}")
             
         except requests.HTTPError as e:
@@ -2882,12 +3113,61 @@ def create_argument_parser():
         help="Automatically confirm reinitialization without prompt"
     )
     
+    # Extension command
+    extension_parser = subparsers.add_parser(
+        'extension',
+        help='Manage PaxD extensions',
+        description='Install, uninstall, and manage PaxD extensions'
+    )
+    extension_subparsers = extension_parser.add_subparsers(
+        dest='extension_command',
+        help='Extension commands',
+        metavar='<extension_command>'
+    )
+    
+    # Extension install command
+    ext_install_parser = extension_subparsers.add_parser(
+        'install',
+        help='Install an extension from a zip file',
+        description='Install a PaxD extension from a zip file'
+    )
+    ext_install_parser.add_argument(
+        'zip_path',
+        help='Path to the extension zip file'
+    )
+    
+    # Extension uninstall command
+    ext_uninstall_parser = extension_subparsers.add_parser(
+        'uninstall',
+        help='Uninstall an extension',
+        description='Remove a PaxD extension'
+    )
+    ext_uninstall_parser.add_argument(
+        'extension_name',
+        help='Name of the extension to uninstall'
+    )
+    
+    # Extension list command
+    extension_subparsers.add_parser(
+        'list',
+        help='List all installed extensions',
+        description='Show all installed PaxD extensions'
+    )
+    
     # Return parser, with all commands
     return parser
 
 def main():
     # Initialize colorama for colored output
     init(autoreset=True) # type: ignore
+    
+    # Initialize extension system
+    global trigger_system, ext_manager
+    trigger_system = TriggerSystem()
+    
+    # Set up extension manager with PaxD's base directory
+    paxd_base_dir = os.path.join(os.path.expandvars(r"%LOCALAPPDATA%"), "PaxD")
+    ext_manager = ExtensionManager(paxd_base_dir, trigger_system)
     
     if os.name != "nt" or not WINDOWS_AVAILABLE:
         print(f"{Fore.RED}PaxD is a Windows only tool.")
@@ -3294,6 +3574,19 @@ def main():
         elif args.command == "check-protocol":
             paxd._verbose_print("Checking paxd:// protocol registration")
             paxd.check_protocol_status()
+        elif args.command == "extension":
+            if args.extension_command == "install":
+                paxd._verbose_print(f"Installing extension: {args.extension_file}")
+                ext_manager.install_extension(args.extension_file)
+            elif args.extension_command == "uninstall":
+                paxd._verbose_print(f"Uninstalling extension: {args.extension_name}")
+                ext_manager.uninstall_extension(args.extension_name)
+            elif args.extension_command == "list":
+                paxd._verbose_print("Listing installed extensions")
+                ext_manager.list_extensions()
+            else:
+                paxd._verbose_print(f"Unknown extension command: {args.extension_command}")
+                print(f"{Fore.RED}Unknown extension command: {args.extension_command}")
 
         else:
             paxd._verbose_print(f"Unknown command: {args.command}")
