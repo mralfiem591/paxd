@@ -53,7 +53,6 @@ import json
 from pathlib import Path as PathLib
 import hashlib
 import zipfile
-import glob
 import shutil
 import argparse # type: ignore (argparse is in paxd file dependencies)
 from colorama import init, Fore, Style  # type: ignore (colorama is in paxd file dependencies)
@@ -502,8 +501,34 @@ class ExtensionManager:
             print(f"Installed extensions ({len(extensions)}):")
             for ext in sorted(extensions):
                 extension_dir = os.path.join(self.extensions_dir, ext)
-                trigger_files = glob.glob(os.path.join(extension_dir, "*.py"))
-                print(f"  - {ext} ({len(trigger_files)} trigger files)")
+                extension_file = os.path.join(extension_dir, "extension.py")
+                
+                # Try to read extension info
+                if os.path.exists(extension_file):
+                    try:
+                        with open(extension_file, 'r', encoding='utf-8') as f:
+                            content = f.read()
+                        
+                        # Execute to get EXTENSION_INFO
+                        namespace = {}
+                        exec(content, namespace)
+                        
+                        if 'EXTENSION_INFO' in namespace:
+                            info = namespace['EXTENSION_INFO']
+                            name = info.get('name', ext)
+                            version = info.get('version', 'unknown')
+                            description = info.get('description', 'No description')
+                            triggers = info.get('triggers', [])
+                            
+                            print(f"  📦 {name} (v{version})")
+                            print(f"      {description}")
+                            print(f"      Triggers: {len(triggers)} ({', '.join(triggers[:3])}{'...' if len(triggers) > 3 else ''})")
+                        else:
+                            print(f"  ❌ {ext} (invalid - missing EXTENSION_INFO)")
+                    except Exception as e:
+                        print(f"  ❌ {ext} (error reading info: {e})")
+                else:
+                    print(f"  ❌ {ext} (missing extension.py)")
     
     def load_all_extensions(self):
         """Load all extensions from the extensions directory"""
@@ -524,42 +549,68 @@ class ExtensionManager:
             self._verbose_print(f"Extension directory not found: {extension_dir}")
             return
         
-        # Find all Python files in the extension directory
-        trigger_files = glob.glob(os.path.join(extension_dir, "*.py"))
+        # Look for the main extension.py file
+        extension_file = os.path.join(extension_dir, "extension.py")
         
-        for trigger_file in trigger_files:
-            try:
-                # Extract trigger name from filename (without .py)
-                trigger_name = os.path.splitext(os.path.basename(trigger_file))[0]
+        if not os.path.exists(extension_file):
+            self._verbose_print(f"Extension file not found: {extension_file}")
+            return
+        
+        try:
+            self._verbose_print(f"Loading extension: {extension_name}")
+            
+            # Read the extension file
+            with open(extension_file, 'r', encoding='utf-8') as f:
+                extension_code = f.read()
+            
+            # Create a namespace for the extension
+            extension_namespace = {
+                '__name__': f'extension_{extension_name}',
+                '__file__': extension_file,
+                'print': print,
+                'os': os,
+                'sys': sys,
+                'datetime': __import__('datetime'),
+                'json': __import__('json'),
+                # Add more safe modules as needed
+            }
+            
+            # Execute the extension code
+            exec(extension_code, extension_namespace)
+            
+            # Check for required components
+            if 'on_trigger' not in extension_namespace:
+                self._verbose_print(f"Extension {extension_name} missing required 'on_trigger' function")
+                return
                 
-                self._verbose_print(f"Loading extension trigger: {extension_name}/{trigger_name}")
+            if not callable(extension_namespace['on_trigger']):
+                self._verbose_print(f"Extension {extension_name} 'on_trigger' is not callable")
+                return
                 
-                # Read and execute the trigger file
-                with open(trigger_file, 'r', encoding='utf-8') as f:
-                    trigger_code = f.read()
-                
-                # Create a namespace for the extension
-                extension_namespace = {
-                    '__name__': f'extension_{extension_name}_{trigger_name}',
-                    '__file__': trigger_file,
-                    'print': print,
-                    'os': os,
-                    'sys': sys,
-                    # Add more safe modules as needed
-                }
-                
-                # Execute the trigger code
-                exec(trigger_code, extension_namespace)
-                
-                # Look for a main function to register as the trigger callback
-                if 'main' in extension_namespace and callable(extension_namespace['main']):
-                    self.trigger_system.register_trigger(trigger_name, extension_namespace['main'])
-                    self._verbose_print(f"Registered trigger callback: {trigger_name}")
-                else:
-                    self._verbose_print(f"No main() function found in {trigger_file}")
+            if 'EXTENSION_INFO' not in extension_namespace:
+                self._verbose_print(f"Extension {extension_name} missing required 'EXTENSION_INFO'")
+                return
+            
+            extension_info = extension_namespace['EXTENSION_INFO']
+            on_trigger_func = extension_namespace['on_trigger']
+            
+            # Get list of triggers to register for
+            triggers = extension_info.get('triggers', [])
+            
+            if not triggers:
+                self._verbose_print(f"Extension {extension_name} has no triggers defined")
+                return
+            
+            # Register the extension for each trigger it wants to handle
+            for trigger_name in triggers:
+                self.trigger_system.register_trigger(trigger_name, on_trigger_func)
+                self._verbose_print(f"Registered {extension_name} for trigger: {trigger_name}")
+            
+            self._verbose_print(f"Successfully loaded extension: {extension_info['name']} v{extension_info['version']}")
                     
-            except Exception as e:
-                self._verbose_print(f"Failed to load extension trigger {trigger_file}: {e}")
+        except Exception as e:
+            self._verbose_print(f"Failed to load extension {extension_name}: {e}")
+            print(f"Failed to load extension {extension_name}: {e}")
 
 
 class PaxD:
