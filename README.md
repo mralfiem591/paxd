@@ -35,7 +35,7 @@ PaxD is a package manager and command-line tool designed to simplify the install
 ## Getting Started
 
 > [!NOTE]
-> PaxD is only compatible with Windows systems at this time.
+> PaxD is only compatible with Windows systems ~~at this time~~, and probably only ever will be.
 
 ### Installing PaxD
 
