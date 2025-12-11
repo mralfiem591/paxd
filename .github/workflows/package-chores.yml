@@ -47,7 +47,7 @@ jobs:
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git pull --rebase
+          git pull
           git add packages/
           git commit -m "chore: update package checksums"
           git push
@@ -75,7 +75,7 @@ jobs:
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git pull --rebase
+          git pull
           git add searchindex.csv
           git commit -m "chore: update search index"
           git push
