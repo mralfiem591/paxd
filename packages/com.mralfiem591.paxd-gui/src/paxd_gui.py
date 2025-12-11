@@ -957,7 +957,7 @@ class PaxDGUI:
         self.load_packages()
         
         # If not ran with argument 'ran-via-paxd', show error and exit
-        if sys.argv[1] != 'ran-via-paxd':
+        if len(sys.argv) < 2 or sys.argv[1] != 'ran-via-paxd':
             messagebox.showerror(
                 "Incorrect Launch Method",
                 "PaxD GUI must be launched via the PaxD command line tool.\n\n"
