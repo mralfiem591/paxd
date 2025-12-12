@@ -19,11 +19,6 @@ class SDKDetails:
         return True
     
     @staticmethod
-    def AssertVersionNoExit(min_version: str) -> bool:
-        print("[PaxD SDK] AssertVersionNoExit() is deprecated and will be removed in a future update, to be replaced by AssertVersion(). Please update your code accordingly. This function will now behave like AssertVersion().\nRandom person using this code, and have no idea what this means? Please report it to the package developers, to help improve their package. Thank you!")
-        return SDKDetails.AssertVersion(min_version)
-    
-    @staticmethod
     def PrintInfo() -> None:
         print(f"PaxD SDK v{SDKDetails.Version}")
         print("Created for the developers of PaxD, by mralfiem591.")
