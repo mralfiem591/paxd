@@ -56,6 +56,7 @@ jobs:
 
   update-search-index:
     runs-on: self-hosted
+    needs: update-checksums # Run after checksum updates to ensure no 2 writes happen at once
 
     steps:
       - name: Checkout repository
@@ -84,6 +85,7 @@ jobs:
 
   generate_issue_report:
     runs-on: self-hosted
+    needs: update-search-index # Run after search index updates to ensure no 2 writes happen at once
 
     steps:
       - name: Checkout repository
