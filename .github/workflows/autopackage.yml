@@ -1,7 +1,14 @@
 name: Auto Package
 
 on:
+  # Run on pull request to extensions branch
   pull_request:
+    branches: [ extensions ]
+    paths:
+      - 'src/**'
+
+  # Run on push to extensions branch
+  push:
     branches: [ extensions ]
     paths:
       - 'src/**'
