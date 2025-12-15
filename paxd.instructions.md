@@ -78,3 +78,4 @@ install: contains the following parts:
     main_executable (optional): the main file to run when this package is called. If this is set, command_alias should be set.
     command_alias (optional): the command the user can run to call the main executable. automatically added to PATH. args given to this are passed into the main executable.
     supports_fastxd (optional, HEAVILY recommended): controls if the package supports the FastxD system. this allows for temporary install of the package, into a temp directory. this can break some packages, and shouldnt be used on packages that write to exteral sources (like appdata)!
+    checksum (do not include): DO NOT include this section. This contains checksums, in the format `sha256:abcdef123456...` to verify your package hasn't been corrupter or tampered with during download. These are **automatically generated** by the PaxD repository, and you should not include them.
