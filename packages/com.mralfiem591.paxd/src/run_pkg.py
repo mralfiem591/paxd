@@ -72,6 +72,10 @@ class PaxDSDKFinder(importlib.abc.MetaPathFinder):
 sys.meta_path.insert(0, PaxDSDKFinder())
 
 # Step 2: run the package, with adjusted sys.argv (remove the first argument, which is the run_pkg.py path, to prevent issues with modules like argparse thinking the main script is named run_pkg.py and not the actual package script)
+
+# Set __file__ to the package file being ran, and __name__ to "__main__" to simulate running as a script
+__file__ = sys.argv[1]
+__name__ = "__main__"
 sys.argv = sys.argv[1:]
 with open(sys.argv[0], "r", encoding="utf-8") as f:
     exec(f.read())
