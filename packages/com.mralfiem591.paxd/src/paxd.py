@@ -1035,7 +1035,7 @@ class PaxD:
         # This line should never be reached due to raise_for_status() or the exception
         return []
 
-    def install(self, package_name, user_requested=False, skip_checksum=False): # type: ignore
+    def install(self, package_name, user_requested=False, skip_checksum=False, link=None): # type: ignore
         """Install a package using the PaxD repository.
         
         Args:
@@ -1083,6 +1083,28 @@ class PaxD:
             self._verbose_print(f"Repository validation failed with status {response.status_code}")
             print(f"Invalid PaxD repository at {repo_url}")
             raise ValueError("Invalid PaxD repository")
+        
+        # If a link is given, check <link name>.link exists in our link directory (os.path.join(os.path.dirname(__file__), "links")), and if so, read the file to get a directory. Check this directory exists, error out if not
+        if link:
+            self._verbose_print(f"Link provided: {link}, checking for corresponding .link file")
+            links_dir = os.path.join(os.path.dirname(__file__), "links")
+            link_file = os.path.join(links_dir, f"{link}.link")
+            if os.path.exists(link_file):
+                self._verbose_print(f"Found link file: {link_file}, reading target directory")
+                with open(link_file, 'r') as f:
+                    target_dir = f.read().strip()
+                self._verbose_print(f"Link target directory: {target_dir}")
+                if os.path.exists(target_dir):
+                    self._verbose_print(f"Link target directory exists: {target_dir}, using this as local app data directory for installation")
+                    local_app_data = target_dir
+                else:
+                    self._verbose_print(f"Link target directory does not exist: {target_dir}")
+                    print(f"{Fore.RED}Link target directory does not exist: {target_dir}")
+                    raise FileNotFoundError(f"Link target directory does not exist: {target_dir}")
+            else:
+                self._verbose_print(f"No link file found for link name: {link} at expected path: {link_file}")
+                print(f"{Fore.RED}No link found with name '{link}' (expected file: {link_file})")
+                raise FileNotFoundError(f"No link found with name '{link}' (expected file: {link_file})")
 
         # Check if this is a metapackage
         if self._is_metapackage(package_name):
@@ -1423,6 +1445,27 @@ class PaxD:
             self._verbose_print("Package installed as dependency, not marking as user-installed")
         
         self._verbose_timing_end(f"install {package_name}")
+
+        # If a link is given, get the directory from the link file:
+        if link:
+            with open(link_file, 'r') as f:
+                target_dir = f.read().strip()
+
+        # Create a .pkglink file in this packages directory containing the path to where the .pxdlink file will be
+        if link:
+            pkglink_file = os.path.join(local_app_data, package_name, ".pkglink")
+            self._verbose_print(f"Creating .pkglink file at: {pkglink_file} with target: {target_dir}")
+            with open(pkglink_file, 'w') as f:
+                f.write(os.path.join(target_dir, f"{package_name}.pxdlink"))
+            print(f"Created .pkglink file at {pkglink_file} pointing to {target_dir}")
+
+        # Create the .pxdlink file at the target location containing the path to this package
+        if link:
+            pxdlink_file = os.path.join(target_dir, f"{package_name}.pxdlink")
+            self._verbose_print(f"Creating .pxdlink file at: {pxdlink_file} pointing back to package")
+            with open(pxdlink_file, 'w') as f:
+                f.write(os.path.join(local_app_data, package_name))
+            print(f"Created .pxdlink file at {pxdlink_file} pointing back to package")
         
         # Trigger: install.end
         trigger_system.execute_trigger("post_install", package=package_name, user_requested=user_requested, version=installed_version)
@@ -1599,6 +1642,18 @@ class PaxD:
         
         pkg_name_friendly = f"{Fore.GREEN}{package_data.get('pkg_info', {}).get('pkg_name', package_name)}{Style.RESET_ALL}, by {Fore.MAGENTA}{package_data.get('pkg_info', {}).get('pkg_author', 'Unknown Author')}{Style.RESET_ALL} ({Fore.BLUE}{package_data.get('pkg_info', {}).get('pkg_version', 'Unknown Version')}{Style.RESET_ALL})"
         print(f"{Fore.CYAN}Retrieved package metadata for '{pkg_name_friendly}'")
+
+        # If a .pkglink file exists, remove the corresponding .pxdlink file
+        pkglink_file = os.path.join(local_app_data, package_name, ".pkglink")
+        if os.path.exists(pkglink_file):
+            if input(f"{Fore.YELLOW}WARN: This package contains a .pkglink file, which may indicate it was installed for another application. This package may be important! Do you still want it gone? (y/N): ").lower() == 'y':
+                with open(pkglink_file, 'r') as f:
+                    target_link = f.read().strip()
+                    if os.path.exists(target_link):
+                        os.remove(target_link)
+                        self._verbose_print(f"Deleted linked .pxdlink file at: {target_link}")
+                os.remove(pkglink_file)
+                self._verbose_print(f"Deleted .pkglink file at: {pkglink_file}")
         
         # Remove the bat file from bin, if it exists
         bat_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bin", f"{package_data.get('install', {}).get('alias', package_name)}.bat")
@@ -3154,6 +3209,11 @@ def create_argument_parser():
         action='store_true',
         help='Skip checksum verification during installation'
     )
+    # Store contents of --link/-l (str)
+    install_parser.add_argument(
+        '--link', '-l',
+        help='Link this package to a \'linker\', by creating a <package name>.pxdlink file in the directory of the linker, containing the package directory.'
+    )
 
     # Uninstall command
     uninstall_parser = subparsers.add_parser(
@@ -3613,7 +3673,7 @@ def main():
         paxd._verbose_print(f"Executing command: {args.command}")
         if args.command == "install":
             paxd._verbose_print(f"Installing package: {args.package_name}, skip_checksum={args.skip_checksum}")
-            paxd.install(args.package_name, user_requested=True, skip_checksum=args.skip_checksum)
+            paxd.install(args.package_name, user_requested=True, skip_checksum=args.skip_checksum, link=args.link if hasattr(args, 'link') else None)
         elif args.command == "uninstall":
             paxd._verbose_print(f"Uninstalling package: {args.package_name}")
             # Check if it's an extension before trying package uninstall
