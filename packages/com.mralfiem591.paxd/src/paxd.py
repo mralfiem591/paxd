@@ -3396,6 +3396,9 @@ def create_argument_parser():
     return parser
 
 def main():
+    if not os.path.exists(os.path.join(os.path.dirname(__file__), "links")):
+        os.mkdir(os.path.join(os.path.dirname(__file__), "links"))
+
     # Initialize colorama for colored output
     init(autoreset=True) # type: ignore
     
