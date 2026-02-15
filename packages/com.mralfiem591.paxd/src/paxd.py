@@ -131,8 +131,8 @@ try:
             print(f"{Fore.CYAN}--- MESSAGE END ---{Style.RESET_ALL}\n")
             
     paxd_sdk.Messaging.ClearMessages("com.mralfiem591.paxd")
-except Exception:
-    print("Warning: Could not load PaxD SDK. Some functionality may be limited.")
+except Exception as e:
+    print(f"Warning: Could not load PaxD SDK. Some functionality may be limited. Error: {e}")
     pass
 
 lexicographic_max_default = 10000
