@@ -1473,6 +1473,24 @@ class PaxD:
         print(f"{Fore.GREEN}> Installed version {Fore.CYAN}{installed_version}{Fore.GREEN} of '{pkg_name_friendly}'{Style.RESET_ALL}")
         if mainfile:
             print(f"{Fore.YELLOW}Easily run it with '{Fore.GREEN}{alias if alias else mainfile.split('.')[0]}{Fore.YELLOW}' in your shell.")
+
+        # Is this a oneshot package? If so, run its mainfile
+        if package_data.get("install", {}).get("oneshot"):
+            self._verbose_print("Package is marked as oneshot, running mainfile immediately")
+            print(f"{Fore.YELLOW}This is a one-shot package, running '{Fore.CYAN}{mainfile}{Fore.YELLOW}' now...")
+            mainfile_path = os.path.join(local_app_data, package_name, mainfile)
+            if os.path.exists(mainfile_path):
+                os.system(f'"{sys.executable}" "{mainfile_path}"')
+                # After running, uninstall the package automatically
+                print(f"{Fore.YELLOW}One-shot package '{Fore.CYAN}{package_name}{Fore.YELLOW}' has been run and will now be uninstalled.")
+                self.uninstall(package_name)
+            else:
+                self._verbose_print(f"Mainfile for one-shot package not found at expected path: {mainfile_path}")
+                print(f"{Fore.RED}Mainfile for one-shot package not found: {mainfile_path}. This may indicate a broken package!")
+
+            # Uninstall the package immediately after running
+            print(f"{Fore.YELLOW}One-shot package '{Fore.CYAN}{package_name}{Fore.YELLOW}' has been run and will now be uninstalled.")
+            self.uninstall(package_name)
     
     def uninstall(self, package_name):
         """Uninstall a package."""
