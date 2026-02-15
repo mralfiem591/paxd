@@ -1487,10 +1487,6 @@ class PaxD:
             else:
                 self._verbose_print(f"Mainfile for one-shot package not found at expected path: {mainfile_path}")
                 print(f"{Fore.RED}Mainfile for one-shot package not found: {mainfile_path}. This may indicate a broken package!")
-
-            # Uninstall the package immediately after running
-            print(f"{Fore.YELLOW}One-shot package '{Fore.CYAN}{package_name}{Fore.YELLOW}' has been run and will now be uninstalled.")
-            self.uninstall(package_name)
     
     def uninstall(self, package_name):
         """Uninstall a package."""
