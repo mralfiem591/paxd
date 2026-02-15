@@ -103,6 +103,8 @@ def find_sdk():
         def exec_module(self, module):
             with open(SDK_PATH, 'r') as f:
                 code = f.read()
+            # Set __file__ in the module's namespace before executing
+            module.__file__ = SDK_PATH
             exec(compile(code, SDK_PATH, 'exec'), module.__dict__)
         
     class PaxDSDKFinder(importlib.abc.MetaPathFinder):
