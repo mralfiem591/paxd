@@ -1477,16 +1477,21 @@ class PaxD:
         # Is this a oneshot package? If so, run its mainfile
         if package_data.get("install", {}).get("oneshot"):
             self._verbose_print("Package is marked as oneshot, running mainfile immediately")
-            print(f"{Fore.YELLOW}This is a one-shot package, running '{Fore.CYAN}{mainfile}{Fore.YELLOW}' now...")
-            mainfile_path = alias if alias else mainfile.split('.')[0]
-            if os.path.exists(mainfile_path):
-                os.system(f'"{sys.executable}" "{os.path.join(os.path.dirname(__file__), "run_pkg.py")}" "{mainfile_path}" {oshot_args if oshot_args else ""}') # Make SDK available to the mainfile by running it through run_pkg.py
-                # After running, uninstall the package automatically
-                print(f"{Fore.YELLOW}One-shot package '{Fore.CYAN}{package_name}{Fore.YELLOW}' has been run and will now be uninstalled.")
-                self.uninstall(package_name)
+            if mainfile:
+                print(f"{Fore.YELLOW}This is a one-shot package, running '{Fore.CYAN}{mainfile}{Fore.YELLOW}' now...")
+                mainfile_path = os.path.join(local_app_data, package_name, mainfile)
+                self._verbose_print(f"Oneshot mainfile path: {mainfile_path}")
+                if os.path.exists(mainfile_path):
+                    os.system(f'"{sys.executable}" "{os.path.join(os.path.dirname(__file__), "run_pkg.py")}" "{mainfile_path}" {oshot_args if oshot_args else ""}') # Make SDK available to the mainfile by running it through run_pkg.py
+                    # After running, uninstall the package automatically
+                    print(f"{Fore.YELLOW}One-shot package '{Fore.CYAN}{package_name}{Fore.YELLOW}' has been run and will now be uninstalled.")
+                    self.uninstall(package_name)
+                else:
+                    self._verbose_print(f"Mainfile for one-shot package not found at expected path: {mainfile_path}")
+                    print(f"{Fore.RED}Mainfile for one-shot package not found: {mainfile_path}. This may indicate a broken package!")
             else:
-                self._verbose_print(f"Mainfile for one-shot package not found at expected path: {mainfile_path}")
-                print(f"{Fore.RED}Mainfile for one-shot package not found: {mainfile_path}. This may indicate a broken package!")
+                print(f"{Fore.YELLOW}Warning: One-shot package '{Fore.CYAN}{package_name}{Fore.YELLOW}' has no mainfile specified")
+                self._verbose_print("Oneshot package missing mainfile")
     
     def uninstall(self, package_name):
         """Uninstall a package."""
