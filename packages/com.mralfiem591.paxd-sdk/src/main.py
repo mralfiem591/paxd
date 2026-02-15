@@ -10,10 +10,10 @@ class SDKDetails:
 
     @staticmethod
     def AssertVersion(min_version: str) -> bool:
-        # Simple version assertion (major.minor.patch)
+        # Simple version assertion (major.minor.patch[.dev])
         min_parts = list(map(int, min_version.split('.')))
         curr_parts = list(map(int, SDKDetails.Version.split('.')))
-        for i in range(3):
+        for i in range(len(min_parts)):
             if curr_parts[i] > min_parts[i]:
                 return True
             elif curr_parts[i] < min_parts[i]:
