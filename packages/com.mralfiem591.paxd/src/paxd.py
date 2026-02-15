@@ -3531,27 +3531,22 @@ def main():
     try:
         repo = paxd._resolve_repository_url(paxd._read_repository_url())
         if repo != "https://raw.githubusercontent.com/mralfiem591/paxd/refs/heads/main":
+            # GET https://raw.githubusercontent.com/mralfiem591/paxd/refs/heads/main/trusted-repositories.txt (one repo per line)
+            trusted_repos = []
+            try:
+                response = requests.get("https://raw.githubusercontent.com/mralfiem591/paxd/refs/heads/main/trusted-repositories.txt", headers=paxd.headers, allow_redirects=True)
+                response.raise_for_status()
+                trusted_repos = [line.strip() for line in response.text.splitlines() if line.strip()]
+            except Exception as e:
+                paxd._verbose_print(f"Error fetching trusted repositories list: {e}")
+                # If we can't fetch the trusted repositories list, we should warn the user about using a custom repository, since we can't verify if it's trusted or not
 
-            if repo == "https://raw.githubusercontent.com/mralfiem591/paxd/refs/heads/staging":
-                print(f"{Fore.YELLOW}You are using the staging repository. This repository may contain unstable or untested packages. {Style.BRIGHT}Proceed with caution!{Style.RESET_ALL}")
+            if repo not in trusted_repos:
+                print(f"{Fore.RED}IMPORTANT: You are using a custom repository: {repo}. PaxD cannot guarantee the authenticity or safety of packages from this source. {Style.BRIGHT}Proceed with caution!{Style.RESET_ALL}")
                 time.sleep(3)
             else:
-                # GET https://raw.githubusercontent.com/mralfiem591/paxd/refs/heads/main/trusted-repositories.txt (one repo per line)
-                trusted_repos = []
-                try:
-                    response = requests.get("https://raw.githubusercontent.com/mralfiem591/paxd/refs/heads/main/trusted-repositories.txt", headers=paxd.headers, allow_redirects=True)
-                    response.raise_for_status()
-                    trusted_repos = [line.strip() for line in response.text.splitlines() if line.strip()]
-                except Exception as e:
-                    paxd._verbose_print(f"Error fetching trusted repositories list: {e}")
-                    # If we can't fetch the trusted repositories list, we should warn the user about using a custom repository, since we can't verify if it's trusted or not
-
-                if repo not in trusted_repos:
-                    print(f"{Fore.RED}IMPORTANT: You are using a custom repository: {repo}. PaxD cannot guarantee the authenticity or safety of packages from this source. {Style.BRIGHT}Proceed with caution!{Style.RESET_ALL}")
-                    time.sleep(3)
-                else:
-                    print(f"{Fore.GREEN}You are using a trusted custom repository: {repo}. However, PaxD cannot guarantee the authenticity or safety of packages from this source. {Style.BRIGHT}Proceed with caution!{Style.RESET_ALL}")
-                    time.sleep(3)
+                print(f"{Fore.GREEN}You are using a trusted custom repository: {repo}. However, PaxD cannot guarantee the authenticity or safety of packages from this source. {Style.BRIGHT}Proceed with caution!{Style.RESET_ALL}")
+                time.sleep(3)
         elif not os.getenv("PAXD_GH_TOKEN", None):
             print(f"{Fore.YELLOW}Warning: You are using the default repository without an authentication token. You may encounter rate limiting issues. It is highly recommended to set up a GitHub token and set the PAXD_GH_TOKEN environment variable.{Style.RESET_ALL}")
         status = requests.get(f"{repo}/status", headers=paxd.headers, allow_redirects=True)
