@@ -2,9 +2,11 @@
 
 import os
 
+links_dir = os.path.join(os.path.dirname(__file__), "links")
+
 # Part 1: utilities that can be accessed by other packages based specifically on the SDK (eg. version)
 class SDKDetails:
-    Version = "1.2.4"
+    Version = "1.2.5"
 
     @staticmethod
     def AssertVersion(min_version: str) -> bool:
@@ -385,6 +387,47 @@ class Helpers:
             elif min_parts_1[i] < min_parts_2[i]:
                 return False
         return True
+    
+# Part 10: Link managemnent
+class Links:
+    @staticmethod
+    def GetLink(link_name: str) -> str:
+        """Get a link by name."""
+        link_file = os.path.join(links_dir, f"{link_name}.link")
+        if os.path.exists(link_file):
+            with open(link_file, 'r') as f:
+                return f.read().strip()
+        return ""
+    
+    @staticmethod
+    def NewLink(link_name: str, path: str):
+        """Create a new link."""
+        link_file = os.path.join(links_dir, f"{link_name}.link")
+        os.makedirs(os.path.dirname(link_file), exist_ok=True)
+        with open(link_file, 'w') as f:
+            f.write(path)
+
+    @staticmethod
+    def DeleteLink(link_name: str):
+        """Delete a link."""
+        link_file = os.path.join(links_dir, f"{link_name}.link")
+        if os.path.exists(link_file):
+            os.remove(link_file)
+
+    @staticmethod
+    def ListLinks() -> list:
+        """List all links."""
+        if not os.path.exists(links_dir):
+            return []
+        
+        links = []
+        for file in os.listdir(links_dir):
+            if file.endswith('.link'):
+                link_name = file[:-5]  # Remove .link extension
+                link_path = Links.GetLink(link_name)
+                links.append({'name': link_name, 'path': link_path})
+        
+        return links
 
         
 if __name__ == "__main__":

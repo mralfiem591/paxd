@@ -1,6 +1,6 @@
 name: PaxD SDK
 author: mralfiem591
-version: 1.2.4
+version: 1.2.5
 description: The main SDK (Software Development Kit) for PaxD.
 license: MIT
 tags:
