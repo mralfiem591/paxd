@@ -291,6 +291,12 @@ def compile_paxd_manifest(yaml_data: dict) -> dict:
         manifest["uninstall"] = {
             "file": yaml_data["uninstall_script"]
         }
+
+    # Handle oneshot (default false)
+    if "oneshot" in install_config:
+        manifest["install"]["oneshot"] = install_config["oneshot"]
+    else:
+        manifest["install"]["oneshot"] = False
     
     return manifest
 
