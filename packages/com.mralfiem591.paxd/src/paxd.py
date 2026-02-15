@@ -1480,7 +1480,7 @@ class PaxD:
             print(f"{Fore.YELLOW}This is a one-shot package, running '{Fore.CYAN}{mainfile}{Fore.YELLOW}' now...")
             mainfile_path = os.path.join(local_app_data, package_name, mainfile)
             if os.path.exists(mainfile_path):
-                os.system(f'"{sys.executable}" "{mainfile_path}"')
+                os.system(f'"{sys.executable}" "{os.path.join(os.path.dirname(__file__), "run_pkg.py")}" "{mainfile_path}"') # Make SDK available to the mainfile by running it through run_pkg.py
                 # After running, uninstall the package automatically
                 print(f"{Fore.YELLOW}One-shot package '{Fore.CYAN}{package_name}{Fore.YELLOW}' has been run and will now be uninstalled.")
                 self.uninstall(package_name)
