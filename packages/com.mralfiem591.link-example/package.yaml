@@ -1,7 +1,8 @@
 name: PaxD Linked and One-Shot Example
 author: mralfiem591
 version: 1.0.0
-description: An example package to demonstrate linking and one-shot functionality in PaxD.
+description: An example package to demonstrate linking and one-shot functionality
+  in PaxD.
 license: MIT
 tags:
 - example
@@ -14,3 +15,5 @@ install:
   command_alias: paxd-oshot
   supports_fastxd: false
   oneshot: true
+  checksum:
+    main.py: sha256:a479545da249941b4fc36f9fc22597e17c0d29d5bff9d0cf2f58bb7fffbfe9ab
