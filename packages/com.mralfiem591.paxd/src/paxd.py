@@ -3524,7 +3524,7 @@ def main():
     paxd = PaxD(verbose=args.verbose if hasattr(args, 'verbose') else False)
     
     # Set up extension manager with PaxD's verbose function
-    paxd_base_dir = os.path.join(os.path.expandvars(r"%LOCALAPPDATA%"), "PaxD")
+    paxd_base_dir = os.path.join(os.path.expandvars(r"%LOCALAPPDATA%"), "PaxD", "com.mralfiem591.paxd")
     ext_manager = ExtensionManager(paxd_base_dir, trigger_system, paxd._verbose_print)
 
     # Check for status messages
