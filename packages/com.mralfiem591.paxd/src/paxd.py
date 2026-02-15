@@ -1035,7 +1035,7 @@ class PaxD:
         # This line should never be reached due to raise_for_status() or the exception
         return []
 
-    def install(self, package_name, user_requested=False, skip_checksum=False, link=None): # type: ignore
+    def install(self, package_name, user_requested=False, skip_checksum=False, link=None, oshot_args = None): # type: ignore
         """Install a package using the PaxD repository.
         
         Args:
@@ -1480,7 +1480,7 @@ class PaxD:
             print(f"{Fore.YELLOW}This is a one-shot package, running '{Fore.CYAN}{mainfile}{Fore.YELLOW}' now...")
             mainfile_path = os.path.join(local_app_data, package_name, mainfile)
             if os.path.exists(mainfile_path):
-                os.system(f'"{sys.executable}" "{os.path.join(os.path.dirname(__file__), "run_pkg.py")}" "{mainfile_path}"') # Make SDK available to the mainfile by running it through run_pkg.py
+                os.system(f'"{sys.executable}" "{os.path.join(os.path.dirname(__file__), "run_pkg.py")}" "{mainfile_path}" {oshot_args if oshot_args else ""}') # Make SDK available to the mainfile by running it through run_pkg.py
                 # After running, uninstall the package automatically
                 print(f"{Fore.YELLOW}One-shot package '{Fore.CYAN}{package_name}{Fore.YELLOW}' has been run and will now be uninstalled.")
                 self.uninstall(package_name)
@@ -3229,6 +3229,11 @@ def create_argument_parser():
         help='Link this package to a \'linker\', by creating a <package name>.pxdlink file in the directory of the linker, containing the package directory.'
     )
 
+    install_parser.add_argument(
+        '--oshot-args', '-oa',
+        help='Arguments to pass to a one-shot package'
+    )
+
     # Uninstall command
     uninstall_parser = subparsers.add_parser(
         'uninstall',
@@ -3701,7 +3706,7 @@ def main():
         paxd._verbose_print(f"Executing command: {args.command}")
         if args.command == "install":
             paxd._verbose_print(f"Installing package: {args.package_name}, skip_checksum={args.skip_checksum}")
-            paxd.install(args.package_name, user_requested=True, skip_checksum=args.skip_checksum, link=args.link if hasattr(args, 'link') else None)
+            paxd.install(args.package_name, user_requested=True, skip_checksum=args.skip_checksum, link=args.link if hasattr(args, 'link') else None, oshot_args=args.oshot_args if hasattr(args, 'oshot_args') else None)
         elif args.command == "uninstall":
             paxd._verbose_print(f"Uninstalling package: {args.package_name}")
             # Check if it's an extension before trying package uninstall
