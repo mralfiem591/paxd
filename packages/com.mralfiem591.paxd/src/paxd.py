@@ -1109,11 +1109,11 @@ class PaxD:
                 else:
                     self._verbose_print(f"Link target directory does not exist: {target_dir}")
                     print(f"{Fore.RED}Link target directory does not exist: {target_dir}")
-                    raise FileNotFoundError(f"Link target directory does not exist: {target_dir}")
+                    return
             else:
                 self._verbose_print(f"No link file found for link name: {link} at expected path: {link_file}")
                 print(f"{Fore.RED}No link found with name '{link}' (expected file: {link_file})")
-                raise FileNotFoundError(f"No link found with name '{link}' (expected file: {link_file})")
+                return
 
         # Check if this is a metapackage
         if self._is_metapackage(package_name):
@@ -1430,7 +1430,34 @@ class PaxD:
                     f.write(f'"{sys.executable}" "{os.path.join(local_app_data, "com.mralfiem591.paxd", "run_pkg.py")}" "{os.path.join(local_app_data, package_name, mainfile)}" %*\n')
                 print(f"Created batch file at {bat_file_path}")
             else:
-                self._verbose_print("Batch file already exists, skipping creation")
+                self._verbose_print("Batch file already exists!")
+                print(f"{Fore.RED}Hmmm... we have ran into a conflict!\n\nA package already uses the alias '{alias}' for its mainfile, which creates a batch file at {bat_file_path}. This means that the new package cannot create its own batch file with the same alias, and you won't be able to run it easily from the command line.\n\nYou have a few options to resolve this:\n1. We can replace the existing batch file with a new one for the new package, but this will break the old package's command line access.\n2. We can end the installation here, and pretend none of this ever happened (this involves deleting this package!)\n3. We can pause the installation here, and let you resolve the issue manually, and you may press enter when you are done.\n{Style.RESET_ALL}")
+                choice = input(f"{Fore.YELLOW}Choose an option (1, 2 or 3): {Style.RESET_ALL}")
+                if choice == "1":
+                    self._verbose_print("User chose to replace existing batch file")
+                    with open(bat_file_path, 'w') as f:
+                        f.write(f"@echo off\n")
+                        f.write(f'"{sys.executable}" "{os.path.join(local_app_data, "com.mralfiem591.paxd", "run_pkg.py")}" "{os.path.join(local_app_data, package_name, mainfile)}" %*\n')
+                    print(f"Replaced existing batch file at {bat_file_path} with new one for {package_name}")
+                elif choice == "2":
+                    self._verbose_print("User chose to end installation due to batch file conflict")
+                    print(f"{Fore.RED}Installation of {package_name} has been cancelled due to batch file conflict. No changes have been made.")
+                    self.uninstall(package_name)  # Uninstall the package to clean up any files that were installed before the conflict was detected
+                    return
+                elif choice == "3":
+                    self._verbose_print("User chose to resolve batch file conflict manually")
+                    print(f"{Fore.YELLOW}Please resolve the batch file conflict at {bat_file_path} manually. You may choose to rename the existing batch file, change its contents, or delete it if you no longer need the old package. Once you have resolved the conflict, press Enter to continue with the installation.")
+                    input()
+                    self._verbose_print("User indicated they have resolved the batch file conflict, continuing installation")
+                    with open(bat_file_path, 'w') as f:
+                        f.write(f"@echo off\n")
+                        f.write(f'"{sys.executable}" "{os.path.join(local_app_data, "com.mralfiem591.paxd", "run_pkg.py")}" "{os.path.join(local_app_data, package_name, mainfile)}" %*\n')
+                    print(f"Created batch file at {bat_file_path} for {package_name} after user resolved conflict")
+                else:
+                    print(f"{Fore.RED}Invalid choice, ending installation to be safe (aka. treating as if you entered 2). No changes have been made.")
+                    self._verbose_print("User made invalid choice for batch file conflict resolution, ending installation")
+                    self.uninstall(package_name)  # Uninstall the package to clean up any files that were installed before the conflict was detected
+                    return
         
         # Create version file for tracking updates
         version_file = os.path.join(local_app_data, package_name, ".VERSION")
