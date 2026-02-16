@@ -1490,6 +1490,7 @@ class PaxD:
                 mainfile_path = os.path.join(local_app_data, package_name, mainfile)
                 self._verbose_print(f"Oneshot mainfile path: {mainfile_path}")
                 if os.path.exists(mainfile_path):
+                    self._verbose_print(f"The following command is ran for this oneshot package: python \"{os.path.join(os.path.dirname(__file__), "run_pkg.py")}\" \"{mainfile_path}\" {oshot_args if oshot_args else ""}")
                     os.system(f'python "{os.path.join(os.path.dirname(__file__), "run_pkg.py")}" "{mainfile_path}" {oshot_args if oshot_args else ""}') # Make SDK available to the mainfile by running it through run_pkg.py
                     # After running, uninstall the package automatically
                     print(f"{Fore.YELLOW}One-shot package '{Fore.CYAN}{package_name}{Fore.YELLOW}' has been run and will now be uninstalled.")
