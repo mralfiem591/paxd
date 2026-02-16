@@ -1102,6 +1102,7 @@ class PaxD:
                 with open(link_file, 'r') as f:
                     target_dir = f.read().strip()
                 self._verbose_print(f"Link target directory: {target_dir}")
+                target_dir = os.path.expandvars(os.path.abspath(target_dir)) # Expand environment variables in the path
                 if os.path.exists(target_dir):
                     self._verbose_print(f"Link target directory exists: {target_dir}, using this as local app data directory for installation")
                     local_app_data = target_dir
