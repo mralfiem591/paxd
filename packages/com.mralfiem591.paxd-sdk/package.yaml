@@ -15,4 +15,4 @@ install:
   exclude_from_updates: []
   supports_fastxd: false
   checksum:
-    main.py: sha256:441518ce7d954228bc8562edb5aca1b7f0f1afb8793d3e3f152fe79e1a3ca3b6
+    main.py: sha256:897550f4ca20b1b8e3018d648762b7e4c4b22e49fef7163b789730e37b35ad91
