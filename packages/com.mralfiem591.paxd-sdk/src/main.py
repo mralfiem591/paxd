@@ -6,7 +6,7 @@ links_dir = os.path.join(os.path.expandvars('%LOCALAPPDATA%'), 'PaxD', 'com.mral
 
 # Part 1: utilities that can be accessed by other packages based specifically on the SDK (eg. version)
 class SDKDetails:
-    Version = "1.2.5"
+    Version = "1.2.6"
 
     @staticmethod
     def AssertVersion(min_version: str) -> bool:
