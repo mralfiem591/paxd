@@ -33,6 +33,8 @@ def cleanup():
                 content = f.read()
                 if "run_pkg.py" in content:
                     needs_rewrite = True
+                if "paxd-imp" in content:
+                    needs_rewrite = False # takes priority over above one
         except (IOError, OSError):
             needs_rewrite = True
     else:
