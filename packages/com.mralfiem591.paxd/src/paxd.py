@@ -1230,6 +1230,10 @@ class PaxD:
 
         if package_name == "com.mralfiem591.paxd-imp":
             print(f"{Fore.RED}{Back.YELLOW}WARNING: The new PaxD client is EXPERIMENTAL. It will replace the old client. You can revert at any time with 'paxd switchback', but expect heavy instability, and many missing features. If you select to continue, you acknowledge that you have read this warning, and understand the risks. Do {Style.BRIGHT}NOT{Style.RESET_ALL}{Fore.RED}{Back.YELLOW} proceed if you do not understand this warning.")
+
+            if not input(f"{Fore.YELLOW}Type '{Fore.CYAN}I UNDERSTAND{Fore.YELLOW}' to continue: ").strip().upper() == "I UNDERSTAND":
+                print(f"{Fore.RED}Installation cancelled by user.")
+                return
             
         # Check if package is already installed
         package_install_path = os.path.join(local_app_data, package_name)
