@@ -233,7 +233,7 @@ class PaxDImproved:
                 hash_func.update(chunk)
         return hash_func.hexdigest()
     
-    def _verify_checksum_with_retry(self, file_path: str, expected_checksum: str, max_retries: int = 4) -> bool:
+    def _verify_checksum_with_retry(self, file_path: str, expected_checksum: str, max_retries: int = 6) -> bool:
         """Verify file checksum with exponential backoff retry"""
         algorithm, expected_hash = expected_checksum.split(':', 1)
         
@@ -247,7 +247,7 @@ class PaxDImproved:
                     self.log_verbose(f"Checksum mismatch for {os.path.basename(file_path)}: expected {expected_hash}, got {actual_hash}")
                     
                     if attempt < max_retries - 1:
-                        wait_time = (2 ** attempt) * 0.5  # Exponential backoff: 0.5s, 1s, 2s, 4s
+                        wait_time = (2 ** attempt) * 0.5  # Exponential backoff: 0.5s, 1s, 2s, 4s, 8s, 16s
                         console.print(f"[yellow]Checksum verification failed for {os.path.basename(file_path)}, retrying in {wait_time}s... (attempt {attempt + 1}/{max_retries})[/yellow]")
                         time.sleep(wait_time)
                     else:
@@ -383,7 +383,7 @@ class PaxDImproved:
                     file_task = progress.add_task("Installing files...", total=len(include_files))
                     
                     for file in include_files:
-                        file_url = f"{repo_url}/packages/{package_name}/{file}"
+                        file_url = f"{repo_url}/packages/{package_name}/src/{file}"
                         local_file_path = os.path.join(package_install_path, file)
                         
                         # Create directories if needed
@@ -617,7 +617,7 @@ class PaxDImproved:
                         file_task = progress.add_task("Updating files...", total=len(include_files))
                         
                         for file in include_files:
-                            file_url = f"{repo_url}/packages/{package_name}/{file}"
+                            file_url = f"{repo_url}/packages/{package_name}/src/{file}"
                             local_file_path = os.path.join(package_install_path, file)
                             
                             # Create directories if needed
