@@ -1034,5 +1034,4 @@ def main():
             import traceback
             console.print(f"[dim]{traceback.format_exc()}[/dim]")
 
-
 main()
