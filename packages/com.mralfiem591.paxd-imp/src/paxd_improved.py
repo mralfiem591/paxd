@@ -1035,5 +1035,4 @@ def main():
             console.print(f"[dim]{traceback.format_exc()}[/dim]")
 
 
-if __name__ == "__main__":
-    main()
+main()
