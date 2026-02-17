@@ -1,0 +1,34 @@
+name: PaxD Improved
+author: mralfiem591
+version: 1.0.0
+description: A modern, beautiful command line interface for PaxD using Rich for enhanced user experience.
+license: MIT
+tags:
+- cli
+- package manager
+- installer
+- windows
+- tool
+- rich
+- modern ui
+- improved ux
+install:
+  files:
+  - paxd_improved.py
+  - repository
+  dependencies:
+    pip:
+    - requests
+    - rich
+    - pyyaml
+    - argparse
+    paxd:
+    - com.mralfiem591.paxd-sdk
+    - com.mralfiem591.paxd
+  firstrun: true
+  updaterun: false
+  exclude_from_updates:
+  - repository
+  main_executable: paxd_improved.py
+  command_alias: paxd-imp
+  supports_fastxd: false
