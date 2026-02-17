@@ -981,10 +981,6 @@ def create_argument_parser():
 def main():
     """Main entry point"""
 
-    if os.path.exists(os.path.join(os.getenv('LOCALAPPDATA', ''), "PaxD", "com.mralfiem591.paxd-imp", ".FIRSTRUN")):
-        paxd.first_time_setup()
-        os.remove(os.path.join(os.getenv('LOCALAPPDATA', ''), "PaxD", "com.mralfiem591.paxd-imp", ".FIRSTRUN"))
-
     parser = create_argument_parser()
     args = parser.parse_args()
     
@@ -995,6 +991,10 @@ def main():
     
     # Create PaxD instance
     paxd = PaxDImproved(verbose=args.verbose)
+
+    if os.path.exists(os.path.join(os.getenv('LOCALAPPDATA', ''), "PaxD", "com.mralfiem591.paxd-imp", ".FIRSTRUN")):
+        paxd.first_time_setup()
+        os.remove(os.path.join(os.getenv('LOCALAPPDATA', ''), "PaxD", "com.mralfiem591.paxd-imp", ".FIRSTRUN"))
     
     # Show welcome message for major commands
     if args.command in ['install', 'search', 'setup']:
