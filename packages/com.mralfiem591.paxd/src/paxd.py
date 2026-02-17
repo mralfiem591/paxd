@@ -1053,7 +1053,7 @@ class PaxD:
         # This line should never be reached due to raise_for_status() or the exception
         return []
 
-    def install(self, package_name, user_requested=False, skip_checksum=False, link=None, oshot_args = None): # type: ignore
+    def install(self, package_name, user_requested=False, skip_checksum=False, link=None, oshot_args=None): # type: ignore
         """Install a package using the PaxD repository.
         
         Args:
@@ -4024,7 +4024,7 @@ def main():
                 paxd.install("com.mralfiem591.paxd-imp", user_requested=True)
             else:
                 paxd._verbose_print("PaxD beta client found, updating...")
-                paxd.update("com.mralfiem591.paxd-imp", user_requested=True)
+                paxd.update("com.mralfiem591.paxd-imp", force=True)
 
             print(f"{Fore.GREEN}Should be done! Your PaxD client is now enrolled in the beta, and is using the new, experimental client. You can rollback at any time with `paxd switchback`.{Style.RESET_ALL}")
 
