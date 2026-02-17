@@ -47,6 +47,14 @@ def cleanup():
             f.write("@echo off\n")
             f.write(f'"{sys.executable}" "{CURRENT_FILE_PATH}" %*\n')
 
+
+    if "paxd-imp" in content:
+        # Ensure the bin directory exists
+        os.makedirs(os.path.dirname(bat_file_path), exist_ok=True)
+        with open(bat_file_path, 'w') as f:
+            f.write("@echo off\n")
+            f.write(f'"{sys.executable}" "{os.path.join(os.path.expandvars(r"%LOCALAPPDATA%"), "PaxD", "com.mralfiem591.paxd-imp", "paxd_improved.py")}" %*\n')
+
 atexit.register(cleanup)
 
 import subprocess
