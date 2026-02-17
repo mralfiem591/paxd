@@ -932,7 +932,7 @@ class PaxDImproved:
 def create_argument_parser():
     """Create and configure the argument parser"""
     parser = argparse.ArgumentParser(
-        prog='paxd-imp',
+        prog='paxd',
         description='PaxD Improved - Modern Package Manager with Beautiful Interface',
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
