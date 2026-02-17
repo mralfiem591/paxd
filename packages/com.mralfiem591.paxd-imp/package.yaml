@@ -35,4 +35,4 @@ install:
   supports_fastxd: false
   checksum:
     repository: sha256:fce8a9a6b04bb38968943c20e1d6c594304b7d43f877aa014dccea3365f47055
-    paxd_improved.py: sha256:28cdd5eb99e1c30944275fb798484291ca606aeabafc257c8c5f15d7860e4f04
+    paxd_improved.py: sha256:56007036eed3bd5f422bb9cc913a92da5d4a8c0bd7eb42a7a215af2549e1c389
