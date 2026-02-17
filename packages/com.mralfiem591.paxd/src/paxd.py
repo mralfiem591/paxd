@@ -1342,8 +1342,29 @@ class PaxD:
                     npm_package = dep[len("npm:"):]
                     self._verbose_print(f"Installing npm package: {npm_package}")
                     print(f"{Fore.CYAN}Installing Node.js package '{Fore.YELLOW}{npm_package}{Fore.CYAN}' via npm")
-                    result = os.system(f"npm install {npm_package}")
+                    result = os.system(f"npm install -g {npm_package}")
                     self._verbose_print(f"NPM install result code: {result}")
+                # Dependency begins with "brew:": use brew to install
+                elif dep.startswith("brew:"):
+                    brew_package = dep[len("brew:"):]
+                    self._verbose_print(f"Installing brew package: {brew_package}")
+                    print(f"{Fore.CYAN}Installing Homebrew package '{Fore.YELLOW}{brew_package}{Fore.CYAN}' via brew")
+                    result = os.system(f"brew install {brew_package}")
+                    self._verbose_print(f"Brew install result code: {result}")
+                # Dependency begins with "scoop:": use scoop to install
+                elif dep.startswith("scoop:"):
+                    scoop_package = dep[len("scoop:"):]
+                    self._verbose_print(f"Installing scoop package: {scoop_package}")
+                    print(f"{Fore.CYAN}Installing Scoop package '{Fore.YELLOW}{scoop_package}{Fore.CYAN}' via scoop")
+                    result = os.system(f"scoop install {scoop_package}")
+                    self._verbose_print(f"Scoop install result code: {result}")
+                # Dependency begins with "cargo:": use cargo to install
+                elif dep.startswith("cargo:"):
+                    cargo_package = dep[len("cargo:"):]
+                    self._verbose_print(f"Installing cargo package: {cargo_package}")
+                    print(f"{Fore.CYAN}Installing Rust package '{Fore.YELLOW}{cargo_package}{Fore.CYAN}' via cargo")
+                    result = os.system(f"cargo install {cargo_package}")
+                    self._verbose_print(f"Cargo install result code: {result}")
                 # Dependency begins with "paxd:": call self.install on the package
                 elif dep.startswith("paxd:"):
                     paxd_package = dep[len("paxd:"):]
