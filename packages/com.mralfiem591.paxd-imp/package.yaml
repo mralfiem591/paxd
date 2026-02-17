@@ -31,7 +31,7 @@ install:
   exclude_from_updates:
   - repository
   main_executable: paxd_improved.py
-  command_alias: paxd-imp
+  command_alias: paxd
   supports_fastxd: false
   checksum:
     repository: sha256:fce8a9a6b04bb38968943c20e1d6c594304b7d43f877aa014dccea3365f47055
