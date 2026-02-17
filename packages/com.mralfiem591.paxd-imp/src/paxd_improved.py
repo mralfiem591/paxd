@@ -547,7 +547,8 @@ class PaxDImproved:
             console.print("[red]Updates of the original PaxD client via PaxD Improved are blocked.[/red]")
             console.print("[yellow]This prevents potential conflicts between the two package managers.[/yellow]")
             console.print("[cyan]Use the original PaxD client for self-updates if needed.[/cyan]")
-            return
+            console.print("[blue]Assuming you want to update com.mralfiem591.paxd-imp, continuing with that...[/blue]")
+            package_name = "com.mralfiem591.paxd-imp"
             
         package_install_path = os.path.join(self.local_app_data, package_name)
         
@@ -887,10 +888,10 @@ class PaxDImproved:
             return
         
         console.print("\n[bold green]Setup complete! You're ready to use PaxD Improved.[/bold green]")
-        console.print("\n[dim]Try these commands to get started:")
-        console.print("  • [cyan]paxd-imp search python[/cyan] - Search for packages")
-        console.print("  • [cyan]paxd-imp list[/cyan] - List installed packages") 
-        console.print("  • [cyan]paxd-imp info <package>[/cyan] - Get package information[/dim]")
+        console.print("\n[dim]Try these commands to get started:[/dim]")
+        console.print("[dim]  • [cyan]paxd-imp search python[/cyan] - Search for packages[/dim]")
+        console.print("[dim]  • [cyan]paxd-imp list[/cyan] - List installed packages[/dim]") 
+        console.print("[dim]  • [cyan]paxd-imp info <package>[/cyan] - Get package information[/dim]")
     
     def switchback(self):
         """Switch back to the original PaxD client by updating paxd.bat"""
