@@ -1,7 +1,8 @@
 name: PaxD Improved
 author: mralfiem591
 version: 1.0.0
-description: A modern, beautiful command line interface for PaxD using Rich for enhanced user experience.
+description: A modern, beautiful command line interface for PaxD using Rich for enhanced
+  user experience.
 license: MIT
 tags:
 - cli
@@ -32,3 +33,6 @@ install:
   main_executable: paxd_improved.py
   command_alias: paxd-imp
   supports_fastxd: false
+  checksum:
+    repository: sha256:fce8a9a6b04bb38968943c20e1d6c594304b7d43f877aa014dccea3365f47055
+    paxd_improved.py: sha256:e2ba70cb9956de0911aadee87ab72fafb843d6c35e8e38c6a68ecaf454538e76
