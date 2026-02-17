@@ -1446,6 +1446,13 @@ class PaxD:
                     f.write(f"@echo off\n")
                     f.write(f'"{sys.executable}" "{os.path.join(local_app_data, "com.mralfiem591.paxd", "run_pkg.py")}" "{os.path.join(local_app_data, package_name, mainfile)}" %*\n')
                 print(f"Created batch file at {bat_file_path}")
+            elif package_name == "com.mralfiem591.paxd-imp":
+                self._verbose_print("Batch file already exists, but package is the new PaxD client, so replacing batch file")
+                os.remove(bat_file_path)
+                with open(bat_file_path, 'w') as f:
+                    f.write(f"@echo off\n")
+                    f.write(f'"{sys.executable}" "{os.path.join(local_app_data, package_name, mainfile)}" %*\n')
+                print(f"Replaced existing batch file at {bat_file_path} with new one for {package_name}")
             else:
                 self._verbose_print("Batch file already exists!")
                 print(f"{Fore.RED}Hmmm... we have ran into a conflict!\n\nA package already uses the alias '{alias}' for its mainfile, which creates a batch file at {bat_file_path}. This means that the new package cannot create its own batch file with the same alias, and you won't be able to run it easily from the command line.\n\nYou have a few options to resolve this:\n1. We can replace the existing batch file with a new one for the new package, but this will break the old package's command line access.\n2. We can end the installation here, and pretend none of this ever happened (this involves deleting this package!)\n3. We can pause the installation here, and let you resolve the issue manually, and you may press enter when you are done.\n{Style.RESET_ALL}")
@@ -3530,6 +3537,13 @@ def create_argument_parser():
         help='List all installed extensions',
         description='Show all installed PaxD extensions'
     )
+
+    # Beta command
+    subparsers.add_parser(
+        'beta',
+        help='Access the new PaxD beta client',
+        description='Switch to the new PaxD beta client for testing upcoming features and improvements (use with caution, very unstable)'
+    )
     
     # Return parser, with all commands
     return parser
@@ -3998,6 +4012,21 @@ def main():
             else:
                 paxd._verbose_print(f"Unknown extension command: {args.extension_command}")
                 print(f"{Fore.RED}Unknown extension command: {args.extension_command}")
+        elif args.command == "beta":
+            print(f"{Fore.YELLOW}Warning: The PaxD beta client is very unstable and may cause issues. It is recommended to only use it for testing purposes, and not for critical tasks. Make sure to report any issues you encounter in the beta client to the PaxD GitHub repository.\n\n{Fore.RED}{Style.BRIGHT}THIS WILL OVERWRITE YOUR MAIN CLIENT, MAKING IT UNUSABLE. DO NOT CONTINUE IF YOU DO NOT KNOW WHAT THIS MEANS!{Style.RESET_ALL}")
+            if input(f"{Fore.RED}Are you sure you want to launch the PaxD beta client? Type 'YES' in full capitals to continue: ") != "YES":
+                print(f"{Fore.YELLOW}Beta client launch cancelled by user.")
+                return
+            
+            # Is the beta client, com.mralfiem591.paxd-imp installed? If not, install it
+            if not os.path.exists(os.path.join(os.path.expandvars(r"%LOCALAPPDATA%"), "PaxD", "com.mralfiem591.paxd-imp")):
+                paxd._verbose_print("PaxD beta client not found, installing...")
+                paxd.install("com.mralfiem591.paxd-imp", user_requested=True)
+            else:
+                paxd._verbose_print("PaxD beta client found, updating...")
+                paxd.update("com.mralfiem591.paxd-imp", user_requested=True)
+
+            print(f"{Fore.GREEN}Should be done! Your PaxD client is now enrolled in the beta, and is using the new, experimental client. You can rollback at any time with `paxd switchback`.{Style.RESET_ALL}")
 
         else:
             paxd._verbose_print(f"Unknown command: {args.command}")
