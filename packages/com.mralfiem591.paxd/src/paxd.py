@@ -13,6 +13,19 @@ except ImportError:
     pass
 
 import os
+from colorama import init, Fore, Style  # type: ignore (colorama is in paxd file dependencies)
+
+# Initialize colorama for colored output
+init(autoreset=True) # type: ignore
+
+# Are we running from %LOCALAPPDATA%\PaxD\com.mralfiem591.paxd? If not, something is wrong!
+if os.path.abspath(os.path.dirname(__file__)) != os.path.expandvars(r"%LOCALAPPDATA%\PaxD\com.mralfiem591.paxd"):
+    print(f"{Fore.RED}Error: PaxD is not running from the correct directory!")
+    print(f"{Fore.RED}Expected: {os.path.expandvars(r'%LOCALAPPDATA%\\PaxD\\com.mralfiem591.paxd')}")
+    print(f"{Fore.RED}Actual:   {os.path.abspath(os.path.dirname(__file__))}")
+    print(f"{Fore.YELLOW}Something aint' right! Are you sure PaxD is correctly installed? Try moving the folder {os.path.basename(os.path.dirname(__file__))} to {os.path.expandvars(r'%LOCALAPPDATA%\\PaxD')}, then, try running `paxd init`. If it still doesn't work, please report this issue to the developers with the details of how you installed PaxD and how you ran it, along with this error message, and then try a full reinstallation.")
+    exit(1)
+
 import sys
 import atexit
 
@@ -65,7 +78,6 @@ import hashlib
 import zipfile
 import shutil
 import argparse # type: ignore (argparse is in paxd file dependencies)
-from colorama import init, Fore, Style, Back  # type: ignore (colorama is in paxd file dependencies)
 import yaml # type: ignore (yaml is in paxd file dependencies)
 import re
 
@@ -3569,9 +3581,6 @@ def create_argument_parser():
 def main():
     if not os.path.exists(os.path.join(os.path.dirname(__file__), "links")):
         os.mkdir(os.path.join(os.path.dirname(__file__), "links"))
-
-    # Initialize colorama for colored output
-    init(autoreset=True) # type: ignore
     
     # Initialize extension trigger system
     global trigger_system, ext_manager
