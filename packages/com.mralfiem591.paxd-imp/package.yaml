@@ -1,7 +1,8 @@
 name: PaxD Improved
 author: mralfiem591
 version: 1.0.0
-description: A modern, beautiful command line interface for PaxD using Rich for enhanced user experience.
+description: A modern, beautiful command line interface for PaxD using Rich for enhanced
+  user experience.
 license: MIT
 tags:
 - cli
