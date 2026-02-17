@@ -34,5 +34,5 @@ install:
   command_alias: paxd
   supports_fastxd: false
   checksum:
-    paxd_improved.py: sha256:eeefa2043268951d292adb528ffc043bbb1c12806fc040de631120eadcc83673
     repository: sha256:fce8a9a6b04bb38968943c20e1d6c594304b7d43f877aa014dccea3365f47055
+    paxd_improved.py: sha256:d8ccf15a2780006ef3ae60a6b3305b2ec70c6531556630184265643bd47ced31
