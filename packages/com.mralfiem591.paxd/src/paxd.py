@@ -1053,7 +1053,7 @@ class PaxD:
         # This line should never be reached due to raise_for_status() or the exception
         return []
 
-    def install(self, package_name, user_requested=False, skip_checksum=False, link=None, oshot_args=None): # type: ignore
+    def install(self, package_name, user_requested=False, skip_checksum=False, link=None, oshot_args=None, skip_beta_message=False): # type: ignore
         """Install a package using the PaxD repository.
         
         Args:
@@ -1238,12 +1238,9 @@ class PaxD:
         if resolved_package is None:
             self._verbose_print(f"'{package_name}' is not an alias, using as direct package name")
 
-        if package_name == "com.mralfiem591.paxd-imp":
-            print(f"{Fore.RED}{Back.YELLOW}WARNING: The new PaxD client is EXPERIMENTAL. It will replace the old client. You can revert at any time with 'paxd switchback', but expect heavy instability, and many missing features. If you select to continue, you acknowledge that you have read this warning, and understand the risks. Do {Style.BRIGHT}NOT{Style.RESET_ALL}{Fore.RED}{Back.YELLOW} proceed if you do not understand this warning.")
-
-            if not input(f"{Fore.YELLOW}Type '{Fore.CYAN}I UNDERSTAND{Fore.YELLOW}' to continue: ").strip().upper() == "I UNDERSTAND":
-                print(f"{Fore.RED}Installation cancelled by user.")
-                return
+        if package_name == "com.mralfiem591.paxd-imp" and not skip_beta_message:
+            print(f"{Fore.RED}ERROR: To install the new beta client, please use `paxd beta`, instead of `paxd install com.mralfiem591.paxd-imp`. This is to prevent users accidentally installing the beta client without realising. If you really want to install, use `paxd beta`.")
+            return
             
         # Check if package is already installed
         package_install_path = os.path.join(local_app_data, package_name)
@@ -4042,7 +4039,7 @@ def main():
             # Is the beta client, com.mralfiem591.paxd-imp installed? If not, install it
             if not os.path.exists(os.path.join(os.path.expandvars(r"%LOCALAPPDATA%"), "PaxD", "com.mralfiem591.paxd-imp")):
                 paxd._verbose_print("PaxD beta client not found, installing...")
-                paxd.install("com.mralfiem591.paxd-imp", user_requested=True)
+                paxd.install("com.mralfiem591.paxd-imp", user_requested=True, skip_beta_message=True)
             else:
                 paxd._verbose_print("PaxD beta client found, updating...")
                 paxd.update("com.mralfiem591.paxd-imp", force=True)

@@ -35,9 +35,13 @@ from rich.columns import Columns
 from rich.align import Align
 from rich.layout import Layout
 from rich.padding import Padding
+import time
 
 # Initialize Rich console
 console = Console()
+
+console.print(f"[bold red]CRITICAL WARNING:[/bold red] [yellow]PaxD Improved is a BETA version of PaxD, which will eventually become the default client. [bold yellow]A LOT OF STUFF IS BROKEN! DO NOT EXPECT STABILITY![/bold yellow][/yellow]\n\n[blue]You can switch back to the default client via [cyan]paxd switchback[/cyan][blue] if you encounter issues.[/blue]\n[green]Please report any bugs you find!\n\nYou may continue after 5 seconds.[/green]")
+time.sleep(5)
 
 class PaxDImproved:
     """Improved PaxD package manager with Rich UI"""
