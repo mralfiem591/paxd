@@ -16,4 +16,4 @@ install:
   supports_fastxd: false
   oneshot: true
   checksum:
-    main.py: sha256:a479545da249941b4fc36f9fc22597e17c0d29d5bff9d0cf2f58bb7fffbfe9ab
+    main.py: sha256:301723867a22f89b057ffc96228962df916b9aeb2934cd0192b18d0975ff7ab0
