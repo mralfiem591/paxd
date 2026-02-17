@@ -23,7 +23,7 @@ if os.path.abspath(os.path.dirname(__file__)) != os.path.expandvars(r"%LOCALAPPD
     print(f"{Fore.RED}Error: PaxD is not running from the correct directory!")
     print(f"{Fore.RED}Expected: {os.path.expandvars(r'%LOCALAPPDATA%\\PaxD\\com.mralfiem591.paxd')}")
     print(f"{Fore.RED}Actual:   {os.path.abspath(os.path.dirname(__file__))}")
-    print(f"{Fore.YELLOW}Something aint' right! Are you sure PaxD is correctly installed? Try moving the folder {os.path.abspath(os.path.dirname(__file__))} to {os.path.expandvars(r'%LOCALAPPDATA%\\PaxD')}, then, try running `paxd init`. If it still doesn't work, please report this issue to the developers with the details of how you installed PaxD and how you ran it, along with this error message, and then try a full reinstallation.")
+    print(f"{Fore.YELLOW}Something aint' right! Are you sure PaxD is correctly installed? Try moving the folder:\n\n{os.path.abspath(os.path.dirname(__file__))}\nto\n{os.path.expandvars('%LOCALAPPDATA%\\PaxD')}\n\nthen, try running `paxd init`. If it still doesn't work, please report this issue to the developers with the details of how you installed PaxD and how you ran it, along with this error message, and then try a full reinstallation.")
     exit(1)
 
 import sys
