@@ -1442,6 +1442,7 @@ class PaxD:
                 choice = input(f"{Fore.YELLOW}Choose an option (1, 2 or 3): {Style.RESET_ALL}")
                 if choice == "1":
                     self._verbose_print("User chose to replace existing batch file")
+                    os.remove(bat_file_path)
                     with open(bat_file_path, 'w') as f:
                         f.write(f"@echo off\n")
                         f.write(f'"{sys.executable}" "{os.path.join(local_app_data, "com.mralfiem591.paxd", "run_pkg.py")}" "{os.path.join(local_app_data, package_name, mainfile)}" %*\n')
