@@ -984,17 +984,17 @@ def main():
     parser = create_argument_parser()
     args = parser.parse_args()
     
-    # Show help if no command provided
-    if not args.command:
-        parser.print_help()
-        return
-    
     # Create PaxD instance
     paxd = PaxDImproved(verbose=args.verbose)
 
     if os.path.exists(os.path.join(os.getenv('LOCALAPPDATA', ''), "PaxD", "com.mralfiem591.paxd-imp", ".FIRSTRUN")):
         paxd.first_time_setup()
         os.remove(os.path.join(os.getenv('LOCALAPPDATA', ''), "PaxD", "com.mralfiem591.paxd-imp", ".FIRSTRUN"))
+
+    # Show help if no command provided
+    if not args.command:
+        parser.print_help()
+        return
     
     # Show welcome message for major commands
     if args.command in ['install', 'search', 'setup']:
