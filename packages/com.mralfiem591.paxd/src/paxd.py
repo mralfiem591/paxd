@@ -55,7 +55,7 @@ import hashlib
 import zipfile
 import shutil
 import argparse # type: ignore (argparse is in paxd file dependencies)
-from colorama import init, Fore, Style  # type: ignore (colorama is in paxd file dependencies)
+from colorama import init, Fore, Style, Back  # type: ignore (colorama is in paxd file dependencies)
 import yaml # type: ignore (yaml is in paxd file dependencies)
 import re
 
@@ -1227,6 +1227,9 @@ class PaxD:
         
         if resolved_package is None:
             self._verbose_print(f"'{package_name}' is not an alias, using as direct package name")
+
+        if package_name == "com.mralfiem591.paxd-imp":
+            print(f"{Fore.RED}{Back.YELLOW}WARNING: The new PaxD client is EXPERIMENTAL. It will replace the old client. You can revert at any time with 'paxd switchback', but expect heavy instability, and many missing features. If you select to continue, you acknowledge that you have read this warning, and understand the risks. Do {Style.BRIGHT}NOT{Style.RESET_ALL}{Fore.RED}{Back.YELLOW} proceed if you do not understand this warning.")
             
         # Check if package is already installed
         package_install_path = os.path.join(local_app_data, package_name)
