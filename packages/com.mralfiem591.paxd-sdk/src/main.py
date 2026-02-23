@@ -10,11 +10,9 @@ class SDKDetails:
     Version = "1.2.6"
 
     @staticmethod
-    @deprecated("AssertVersion is deprecated and will be removed in a future version. Please use Helpers.AssertVersion('<min_version>', SDKDetails.Version) instead.")
+    @deprecated("AssertVersion is deprecated and will be removed in a future version. Please use Helpers.AssertVersion('<min_version>', SDKDetails.Version) instead.", category=DeprecationWarning, stacklevel=1)
     def AssertVersion(min_version: str) -> bool:
         # Simple version assertion (major.minor.patch[.dev])
-
-        print(f"AssertVersion is deprecated and will be removed in a future version. Please use Helpers.AssertVersion('<min_version>', SDKDetails.Version) instead.")
 
         min_parts = list(map(int, min_version.split('.')))
         curr_parts = list(map(int, SDKDetails.Version.split('.')))
