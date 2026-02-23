@@ -1,16 +1,21 @@
 # PaxD SDK - the main SDK for use by PaxD packages
 
 import os
+from warnings import deprecated
 
-links_dir = os.path.join(os.path.expandvars('%LOCALAPPDATA%'), 'PaxD', 'com.mralfiem591.paxd', 'links')
+_links_dir = os.path.join(os.path.expandvars('%LOCALAPPDATA%'), 'PaxD', 'com.mralfiem591.paxd', 'links')
 
 # Part 1: utilities that can be accessed by other packages based specifically on the SDK (eg. version)
 class SDKDetails:
     Version = "1.2.6"
 
     @staticmethod
+    @deprecated("AssertVersion is deprecated and will be removed in a future version. Please use Helpers.AssertVersion('<min_version>', SDKDetails.Version) instead.")
     def AssertVersion(min_version: str) -> bool:
         # Simple version assertion (major.minor.patch[.dev])
+
+        print(f"AssertVersion is deprecated and will be removed in a future version. Please use Helpers.AssertVersion('<min_version>', SDKDetails.Version) instead.")
+
         min_parts = list(map(int, min_version.split('.')))
         curr_parts = list(map(int, SDKDetails.Version.split('.')))
         for i in range(len(min_parts)):
@@ -393,7 +398,7 @@ class Links:
     @staticmethod
     def GetLink(link_name: str) -> str:
         """Get a link by name."""
-        link_file = os.path.join(links_dir, f"{link_name}.link")
+        link_file = os.path.join(_links_dir, f"{link_name}.link")
         if os.path.exists(link_file):
             with open(link_file, 'r') as f:
                 return f.read().strip()
@@ -402,7 +407,7 @@ class Links:
     @staticmethod
     def NewLink(link_name: str, path: str):
         """Create a new link."""
-        link_file = os.path.join(links_dir, f"{link_name}.link")
+        link_file = os.path.join(_links_dir, f"{link_name}.link")
         os.makedirs(os.path.dirname(link_file), exist_ok=True)
         with open(link_file, 'w') as f:
             f.write(path)
@@ -410,18 +415,18 @@ class Links:
     @staticmethod
     def DeleteLink(link_name: str):
         """Delete a link."""
-        link_file = os.path.join(links_dir, f"{link_name}.link")
+        link_file = os.path.join(_links_dir, f"{link_name}.link")
         if os.path.exists(link_file):
             os.remove(link_file)
 
     @staticmethod
     def ListLinks() -> list:
         """List all links."""
-        if not os.path.exists(links_dir):
+        if not os.path.exists(_links_dir):
             return []
         
         links = []
-        for file in os.listdir(links_dir):
+        for file in os.listdir(_links_dir):
             if file.endswith('.link'):
                 link_name = file[:-5]  # Remove .link extension
                 link_path = Links.GetLink(link_name)
