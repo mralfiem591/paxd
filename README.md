@@ -7,17 +7,18 @@
 ![PaxD Logo](repoasset/logo.png)
 ![PaxD Ready Badge](repoasset/paxdready.png)
 
-> [!IMPORTANT]
-> This repository isnt meant to be cloned unless you are contributing! It is supposed to be used for PaxD to be able to retrieve its packages via its system.
-
-> [!IMPORTANT]
-> We know we are a bit early, but **PaxD 26.0.0 HAS BEEN RELEASED!!!** 🎉🎉 This is by far the biggest update PaxD has recieved, and we plan to continue work. You will see the roadmap fill up shortly!
-
 The official default repository for PaxD packages, and home to the official PaxD package.
 
 [Our Website](https://mralfiem591.github.io/paxd)
 
-**Install (or repair) PaxD!**: `curl -L -o %TEMP%\paxd_installer.py https://raw.githubusercontent.com/mralfiem591/paxd/refs/heads/main/paxd-installer.py && python %TEMP%\paxd_installer.py`
+**Install (or repair) PaxD!**: Download the `PaxD_Installer.exe` from the [Releases tab](https://github.com/mralfiem591/paxd/releases/latest) and run it!
+
+<details>
+<summary>Advanced: One-liner installation</summary>
+
+`curl -L -o %TEMP%\paxd_installer.py https://raw.githubusercontent.com/mralfiem591/paxd/refs/heads/main/paxd-installer.py && python %TEMP%\paxd_installer.py`
+
+</details>
 
 Want to use PaxD, without fully installing it? **Try FastxD, the more temporary solution!**: `curl -L -o %TEMP%\fastxd.py https://raw.githubusercontent.com/mralfiem591/paxd/refs/heads/main/fastxd.py && python %TEMP%\fastxd.py`
 

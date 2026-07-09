@@ -7,3 +7,4 @@ repoasset/favicon.ico
 .env
 __pycache__/
 **.pyc
+Output/

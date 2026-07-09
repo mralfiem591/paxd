@@ -10,6 +10,14 @@ except ImportError:
 
 WINDOWS_AVAILABLE = os.name == "nt"
 
+import argparse
+import sys
+
+parser = argparse.ArgumentParser(description="PaxD Installer")
+parser.add_argument("--quiet", action="store_true", help="Run in unattended mode without prompts.")
+parser.add_argument("--repo", default="", help="The PaxD-ready repository URL to install from.")
+parser.add_argument("--no-cleanup", action="store_true", help="Do not clean up the installer file.")
+args = parser.parse_args()
 def is_admin() -> bool:
     """Check if the script is running with administrator privileges."""
     if not WINDOWS_AVAILABLE or ctypes is None:
@@ -86,6 +94,8 @@ except ImportError:
 
 def one_liner_cleanup():
     """Simply delete %TEMP%\\paxd_installer.py."""
+    if args.no_cleanup:
+        return
     print(Fore.YELLOW + "Cleaning up installer file...")
     if os.path.exists(os.path.join(os.path.expandvars(r"%TEMP%"), "paxd_installer.py")):
         os.remove(os.path.join(os.path.expandvars(r"%TEMP%"), "paxd_installer.py"))
@@ -98,10 +108,16 @@ if os.path.join(os.path.expandvars(r"%TEMP%"), "paxd_installer.py") == os.path.a
 print(Fore.CYAN + "Welcome to the PaxD Installer!")
 print(Fore.CYAN + "This will install PaxD and set it up for first use.")
 print()
-print(Fore.YELLOW + "First, a quick question:")
-repo = input(f"{Fore.YELLOW}Which repository would you like to set up PaxD with, and install it from? {Fore.LIGHTYELLOW_EX}(Note: The repository must be PaxD-ready, meaning it contains com.mralfiem591.paxd in it's repository) (default: https://raw.githubusercontent.com/mralfiem591/paxd/refs/heads/main){Fore.YELLOW}: ").strip().lower()
-if not repo:
+
+if args.repo:
+    repo = args.repo.strip().lower()
+elif args.quiet:
     repo = "https://raw.githubusercontent.com/mralfiem591/paxd/refs/heads/main"
+else:
+    print(Fore.YELLOW + "First, a quick question:")
+    repo = input(f"{Fore.YELLOW}Which repository would you like to set up PaxD with, and install it from? {Fore.LIGHTYELLOW_EX}(Note: The repository must be PaxD-ready, meaning it contains com.mralfiem591.paxd in it's repository) (default: https://raw.githubusercontent.com/mralfiem591/paxd/refs/heads/main){Fore.YELLOW}: ").strip().lower()
+    if not repo:
+        repo = "https://raw.githubusercontent.com/mralfiem591/paxd/refs/heads/main"
 
 repo = _resolve_repository_url(repo)
 print(f"{Fore.GREEN}Repository URL resolved to: {Fore.CYAN}{repo}{Fore.GREEN}.")
@@ -147,9 +163,10 @@ print(Fore.GREEN + "   - uv and python are installed and in PATH.")
 print()
 print(Fore.GREEN + "All pre-checks passed.")
 print()
-if input(Fore.GREEN + f"Your system is ready for installation/repair! Proceed? (y/n): ").strip().lower() != "y":
-    print(Fore.RED + "Installation/repair aborted by user.")
-    exit(1)
+if not args.quiet:
+    if input(Fore.GREEN + f"Your system is ready for installation/repair! Proceed? (y/n): ").strip().lower() != "y":
+        print(Fore.RED + "Installation/repair aborted by user.")
+        exit(1)
     
 if os.path.exists(os.path.join(os.path.expandvars(r"%LOCALAPPDATA%"), "PaxD")):
     import shutil
@@ -174,7 +191,7 @@ with open(os.path.join(local_app_data, "com.mralfiem591.paxd", ".FIRSTRUN"), "w"
     
 print(Fore.GREEN + "4- Installing dependencies of PaxD...")
 import sys
-result = subprocess.run(["uv", "pip", "install", "--system", "--python", sys.executable, "requests", "colorama", "rich", "argparse", "sentry-sdk"])
+result = subprocess.run(["uv", "pip", "install", "--system", "--python", sys.executable, "requests", "colorama", "rich", "sentry-sdk"])
 if result.returncode != 0:
     print(Fore.RED + "ERROR: Failed to install dependencies via uv. Please ensure you have an active internet connection and try again.")
 
